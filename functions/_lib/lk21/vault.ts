@@ -3,7 +3,7 @@ import { LK21_USER_AGENT, ufetch, VAULT_BASE } from "./common";
 import type { CatalogItem } from "./search";
 
 const BATCH = 10;
-const DEFAULT_ANCHOR = 34560;
+const DEFAULT_MAX = 34560;
 const CACHE_MS = 6 * 60 * 60 * 1000;
 
 function mapPost(p: any): CatalogItem {
@@ -32,46 +32,64 @@ async function postDetail(ids: number[]): Promise<any[]> {
   return data.posts || [];
 }
 
+// Batch dijalankan paralel agar katalog cepat.
 export async function vaultByIds(ids: number[]): Promise<CatalogItem[]> {
-  const out: CatalogItem[] = [];
-  for (let i = 0; i < ids.length; i += BATCH) {
-    const posts = await postDetail(ids.slice(i, i + BATCH));
-    out.push(...posts.map(mapPost));
-  }
-  return out;
+  const chunks: number[][] = [];
+  for (let i = 0; i < ids.length; i += BATCH) chunks.push(ids.slice(i, i + BATCH));
+  const results = await Promise.all(chunks.map((c) => postDetail(c).catch(() => [] as any[])));
+  return results.flat().map(mapPost);
 }
 
 async function hasPosts(start: number): Promise<boolean> {
-  const ids = [start, start + 1, start + 2, start + 3, start + 4];
-  const posts = await postDetail(ids).catch(() => []);
+  const posts = await postDetail([start, start + 1, start + 2, start + 3, start + 4]).catch(() => []);
   return posts.length > 0;
 }
 
 async function discoverMaxId(anchor: number): Promise<number> {
-  let best = 0;
-  // pindai jendela di sekitar anchor (naik & turun, karena frontier bergerak pelan)
-  for (let x = anchor - 300; x <= anchor + 400; x += 25) {
-    if (await hasPosts(x)) best = Math.max(best, x);
+  // batas atas: naik dari anchor+200 selama masih ada post
+  let high = anchor + 200;
+  for (let i = 0; i < 20; i++) {
+    if (await hasPosts(high)) high += 100;
+    else break;
   }
-  if (!best) {
-    for (let x = anchor; x > anchor - 10000; x -= 100) {
-      if (await hasPosts(x)) {
-        best = x;
-        break;
-      }
+  // turun untuk menemukan post valid terakhir
+  let found = 0;
+  for (let x = high; x >= anchor - 600; x -= 20) {
+    if (await hasPosts(x)) {
+      found = x;
+      break;
     }
   }
-  if (!best) return anchor;
-  // refine ke atas dalam +25
-  let max = best;
-  for (let d = 1; d <= 25; d++) {
-    if (await hasPosts(best + d)) max = best + d;
+  if (!found) return 0;
+  let max = found;
+  for (const d of [5, 10, 15]) {
+    if (await hasPosts(found + d)) max = found + d;
   }
   return max + 9;
 }
 
-let inflightDiscovery: Promise<number> | null = null;
+let inflightDiscovery: Promise<void> | null = null;
 
+async function refreshMaxId(ctx: RouteContext, current: number): Promise<void> {
+  if (inflightDiscovery) return inflightDiscovery;
+  inflightDiscovery = (async () => {
+    const discovered = await discoverMaxId(current).catch(() => 0);
+    const value = discovered > 0 ? discovered : current;
+    await ctx.env.DB.prepare(
+      `INSERT INTO feature_flags (key, value, updated_at) VALUES ('vault_max_id', ?, datetime('now'))
+       ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = datetime('now')`
+    )
+      .bind(String(value))
+      .run()
+      .catch(() => {});
+  })().finally(() => {
+    inflightDiscovery = null;
+  });
+  return inflightDiscovery;
+}
+
+// Selalu cepat: pakai override/cache/default. Discovery dijalankan di background
+// (waitUntil) agar tidak menahan response.
 export async function getMaxId(ctx: RouteContext): Promise<number> {
   const override = Number(ctx.env.VAULT_MAX_ID);
   if (Number.isFinite(override) && override > 0) return override;
@@ -80,28 +98,15 @@ export async function getMaxId(ctx: RouteContext): Promise<number> {
     .first<{ value: string; updated_at: string }>()
     .catch(() => null);
   const cached = row ? Number(row.value) : 0;
+
   if (cached > 0 && row) {
     const age = Date.now() - new Date(row.updated_at.replace(" ", "T") + "Z").getTime();
     if (age >= 0 && age < CACHE_MS) return cached;
   }
 
-  if (!inflightDiscovery) {
-    inflightDiscovery = (async () => {
-      const discovered = await discoverMaxId(cached > 0 ? cached : DEFAULT_ANCHOR).catch(() => 0);
-      const value = discovered > 0 ? discovered : cached > 0 ? cached : DEFAULT_ANCHOR;
-      await ctx.env.DB.prepare(
-        `INSERT INTO feature_flags (key, value, updated_at) VALUES ('vault_max_id', ?, datetime('now'))
-         ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = datetime('now')`
-      )
-        .bind(String(value))
-        .run()
-        .catch(() => {});
-      return value;
-    })().finally(() => {
-      inflightDiscovery = null;
-    });
-  }
-  return inflightDiscovery;
+  const current = cached > 0 ? cached : DEFAULT_MAX;
+  ctx.waitUntil(refreshMaxId(ctx, current).catch(() => {}));
+  return current;
 }
 
 // Katalog ber-paginasi dari enumerasi ID (host vault lolos dari Worker).
@@ -109,7 +114,7 @@ export async function vaultCatalog(ctx: RouteContext, page = 1, size = 24): Prom
   const max = await getMaxId(ctx);
   const top = max - (page - 1) * size;
   const ids: number[] = [];
-  for (let i = 0; i < size + 12; i++) ids.push(top - i);
+  for (let i = 0; i < size + 6; i++) ids.push(top - i);
   const items = await vaultByIds(ids);
   return items.slice(0, size);
 }

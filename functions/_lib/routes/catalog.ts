@@ -41,10 +41,15 @@ async function feed(ctx: RouteContext, path: string, page: number, opts: FeedOpt
     }
 
     try {
-      let items = await vaultCatalog(ctx, page, size);
+      let items: CatalogItem[];
       if (opts.sortByRating) {
-        const extra = await vaultCatalog(ctx, page + 1, size).catch(() => [] as CatalogItem[]);
-        items = items.concat(extra).sort((a, b) => (b.rating || 0) - (a.rating || 0)).slice(0, size);
+        const [a, b] = await Promise.all([
+          vaultCatalog(ctx, page, size),
+          vaultCatalog(ctx, page + 1, size).catch(() => [] as CatalogItem[]),
+        ]);
+        items = a.concat(b).sort((x, y) => (y.rating || 0) - (x.rating || 0)).slice(0, size);
+      } else {
+        items = await vaultCatalog(ctx, page, size);
       }
       if (items.length) return items;
     } catch {
