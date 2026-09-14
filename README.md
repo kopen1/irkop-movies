@@ -121,7 +121,7 @@ Penanganan:
 1. **Fallback otomatis.** Feed katalog sudah otomatis jatuh ke search API
    (`gudangvape.com/search.php?s=*`) bila scrape listing diblokir. Jika search
    juga diblokir, Home akan error.
-2. **Relay.** Deploy relay kecil di luar Cloudflare (lihat `relay/deno.ts`),
+2. **Relay.** Deploy relay kecil di luar Cloudflare (lihat `deno.ts`),
    lalu set env/secret:
    ```
    RELAY_URL = https://<relay>.deno.dev/?url=

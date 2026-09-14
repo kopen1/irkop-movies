@@ -16,7 +16,7 @@ APP_BASE_URL = "https://irkop-movies.pages.dev/"
 # Basis situs sumber katalog
 LK21_BASE = "https://tv12.lk21official.cc"
 # Opsional: set jika upstream memblokir Worker (error "upstream 403").
-# Lihat relay/deno.ts. Contoh: RELAY_URL = "https://<relay>.deno.dev/?url="
+# Lihat deno.ts. Contoh: RELAY_URL = "https://<relay>.deno.dev/?url="
 # RELAY_URL = ""
 
 # Secret (JANGAN ditulis di sini). Set lewat:

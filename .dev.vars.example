@@ -7,5 +7,5 @@ SESSION_SECRET=GANTI_RANDOM_STRING_PANJANG
 LK21_BASE=https://tv12.lk21official.cc
 
 # Opsional. Isi HANYA jika upstream memblokir Worker (error "upstream 403").
-# Lihat folder relay/ untuk cara deploy relay.
+# Lihat file deno.ts di root untuk cara deploy relay.
 # RELAY_URL=https://<relay>.deno.dev/?url=

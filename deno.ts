@@ -1,17 +1,21 @@
 // Relay untuk NontonGo.
 //
-// Upstream (tv12.lk21official.cc) memblokir request dari Cloudflare Worker (403),
-// jadi Worker memanggil relay ini. Relay harus berjalan di LUAR Cloudflare.
+// Kenapa ada: upstream (tv12.lk21official.cc dll) memblokir request dari
+// Cloudflare Worker (403 "Just a moment..."). Worker memanggil relay ini yang
+// berjalan di platform lain (Deno Deploy) agar tidak diblokir.
 //
-// Deploy (Deno Deploy — gratis, tanpa config):
-//   1. Buka https://dash.deno.com → New Project → Playground / Deploy from GitHub.
-//   2. Tempel isi file ini, deploy.
-//   3. Dapat URL: https://<nama-project>.deno.dev
-//   4. Set env RELAY_URL di Cloudflare Pages:
-//        RELAY_URL = https://<nama-project>.deno.dev/?url=
+// Deploy di Deno Deploy (console.deno.com):
+//   - Framework preset : No Preset
+//   - Install command  : (kosong)
+//   - Build command    : (kosong)
+//   - Runtime          : Dynamic
+//   - Dynamic Entrypoint: deno.ts   <-- file ini
+//   - Static Directory : (kosong)
 //
-// Kontrak: GET/POST https://<relay>/?url=<TARGET_URL (URL-encoded)>
-// Body, method, dan header diteruskan. Response diteruskan apa adanya (streaming).
+// Lalu set di Cloudflare Pages: RELAY_URL = https://<app>.deno.net/?url=
+//
+// Pemakaian: GET/POST https://<relay>/?url=<TARGET_URL (URL-encoded)>
+// Body, method, dan header diteruskan. Response diteruskan apa adanya.
 
 const UA =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36";
@@ -29,8 +33,8 @@ Deno.serve(async (req: Request): Promise<Response> => {
 
   const target = new URL(req.url).searchParams.get("url");
   if (!target) {
-    return new Response(JSON.stringify({ error: "missing ?url=" }), {
-      status: 400,
+    return new Response(JSON.stringify({ role: "nontongo-relay", ok: true }), {
+      status: 200,
       headers: { "content-type": "application/json", ...CORS },
     });
   }
