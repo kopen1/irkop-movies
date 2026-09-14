@@ -19,8 +19,28 @@ export function setRelay(value?: string): void {
   RELAY = value && value.trim() ? value.trim() : "";
 }
 
+// Hanya host ini yang perlu relay (diblokir dari Worker). Host lain
+// (videonode, playcdn, stream CDN, vault, related) justru JANGAN lewat relay,
+// karena Node fetch-nya kena 403 fingerprint — sementara Worker bisa langsung.
+const RELAY_HOST_PATTERNS = [
+  /lk21official\./i,
+  /lk21online\./i,
+  /nontondrama\./i,
+  /gudangvape\.com$/i,
+  /^xx1\.red$/i,
+];
+
+function needsRelay(url: string): boolean {
+  try {
+    const host = new URL(url).host;
+    return RELAY_HOST_PATTERNS.some((re) => re.test(host));
+  } catch {
+    return false;
+  }
+}
+
 export function viaRelay(url: string): string {
-  if (!RELAY) return url;
+  if (!RELAY || !needsRelay(url)) return url;
   const encoded = encodeURIComponent(url);
   return RELAY.includes("{url}") ? RELAY.replace("{url}", encoded) : RELAY + encoded;
 }
