@@ -4,9 +4,14 @@ import { randomToken } from "../crypto";
 import { clearSessionCookie, createSession, destroySession, getSessionUser, upsertUser } from "../session";
 
 export async function adminLogin(ctx: RouteContext): Promise<Response> {
-  const body = (await ctx.request.json().catch(() => ({}))) as { email?: string };
+  const body = (await ctx.request.json().catch(() => ({}))) as { email?: string; key?: string };
   const email = String(body.email || "").trim().toLowerCase();
   if (!email) return error("Email wajib diisi", 400);
+
+  // Jika ADMIN_KEY diset, wajib kunci yang cocok.
+  if (ctx.env.ADMIN_KEY && String(body.key || "") !== ctx.env.ADMIN_KEY) {
+    return error("Kunci admin salah", 403);
+  }
 
   const admin = await ctx.env.DB.prepare("SELECT email FROM admins WHERE lower(email) = lower(?)")
     .bind(email)

@@ -33,6 +33,8 @@ const ROUTES: RouteDef[] = [
   { method: "GET", path: "catalog/search", handler: catalog.search },
   { method: "GET", path: "catalog/suggest", handler: catalog.suggest },
   { method: "GET", path: "catalog/list", handler: catalog.list },
+  { method: "GET", path: "catalog/year", handler: catalog.byYear },
+  { method: "GET", path: "catalog/country", handler: catalog.byCountry },
   { method: "GET", path: "catalog/episodes", handler: catalog.episodes },
   { method: "GET", path: "catalog/related", handler: catalog.related },
   { method: "GET", path: "catalog/detail/:slug", handler: catalog.detail },
@@ -67,6 +69,9 @@ const ROUTES: RouteDef[] = [
   { method: "GET", path: "admin/audit", handler: admin.auditList },
   { method: "GET", path: "admin/stream-health", handler: admin.streamHealth },
   { method: "GET", path: "admin/stream-map/build", handler: admin.streamMapBuild },
+  { method: "GET", path: "admin/stream-map/build-stream", handler: admin.streamMapBuildStream },
+  { method: "GET", path: "admin/stream-map", handler: admin.streamMapList },
+  { method: "DELETE", path: "admin/stream-map/:slug", handler: admin.streamMapDelete },
 
   { method: "GET", path: "health", handler: health },
   { method: "GET", path: "debug/lk21", handler: debugUpstreams },
@@ -94,6 +99,17 @@ function match(method: Method, path: string, seg: string[]): { handler: Handler;
   return null;
 }
 
+// Rate limit sederhana per-IP (per isolate, bukan global).
+const buckets = new Map<string, number[]>();
+function isRateLimited(ip: string, limit = 120, windowMs = 60_000): boolean {
+  const now = Date.now();
+  const arr = (buckets.get(ip) || []).filter((t) => now - t < windowMs);
+  arr.push(now);
+  buckets.set(ip, arr);
+  if (buckets.size > 5000) buckets.clear();
+  return arr.length > limit;
+}
+
 export async function handleApi(context: AppContext): Promise<Response> {
   if (context.request.method === "OPTIONS") {
     return new Response(null, { status: 204 });
@@ -104,6 +120,11 @@ export async function handleApi(context: AppContext): Promise<Response> {
   const url = new URL(context.request.url);
   const path = url.pathname.replace(/^\/api\/?/, "").replace(/\/+$/, "");
   const seg = path.split("/").filter(Boolean);
+
+  if (path.startsWith("catalog/") || path.startsWith("stream/") || path.startsWith("auth/")) {
+    const ip = context.request.headers.get("CF-Connecting-IP") || "unknown";
+    if (isRateLimited(ip)) return error("Terlalu banyak permintaan. Coba beberapa saat lagi.", 429);
+  }
 
   let user = null;
   try {

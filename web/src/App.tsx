@@ -9,6 +9,8 @@ import { Search } from "./pages/Search";
 import { Discover } from "./pages/Discover";
 import { Catalog } from "./pages/Catalog";
 import { Popular } from "./pages/Popular";
+import { YearPage } from "./pages/YearPage";
+import { CountryPage } from "./pages/CountryPage";
 import { Watchlist } from "./pages/Watchlist";
 import { History } from "./pages/History";
 import { NotFound } from "./pages/NotFound";
@@ -36,6 +38,8 @@ export default function App() {
         <Route path="popular" element={<Popular />} />
         <Route path="movies" element={<Catalog type="movie" title="🎬 Film" />} />
         <Route path="series" element={<Catalog type="series" title="📺 Series" />} />
+        <Route path="year" element={<YearPage />} />
+        <Route path="country" element={<CountryPage />} />
         <Route path="watchlist" element={<Watchlist />} />
         <Route path="history" element={<History />} />
         <Route

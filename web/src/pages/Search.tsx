@@ -17,12 +17,17 @@ export function Search() {
   const [input, setInput] = useState("");
   const [query, setQuery] = useState("");
   const [page, setPage] = useState(1);
+  const [type, setType] = useState("");
+  const [year, setYear] = useState("");
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [showSuggest, setShowSuggest] = useState(false);
 
   const { data, loading } = useAsync(
-    () => (query ? api.search(query, page) : Promise.resolve({ items: [], totalPages: 0, query: "" })),
-    [query, page]
+    () =>
+      query
+        ? api.search(query, page, type, year)
+        : Promise.resolve({ items: [], totalPages: 0, query: "" }),
+    [query, page, type, year]
   );
 
   useEffect(() => {
@@ -90,6 +95,33 @@ export function Search() {
           </ul>
         )}
       </form>
+
+      {query && (
+        <div className="flex gap-2 mt-3">
+          <select
+            value={type}
+            onChange={(e) => {
+              setType(e.target.value);
+              setPage(1);
+            }}
+            className="bg-surface border border-line rounded-lg px-3 py-2 text-sm"
+          >
+            <option value="">Semua tipe</option>
+            <option value="movie">Film</option>
+            <option value="series">Series</option>
+          </select>
+          <input
+            value={year}
+            onChange={(e) => {
+              setYear(e.target.value.replace(/[^0-9]/g, "").slice(0, 4));
+              setPage(1);
+            }}
+            placeholder="Tahun (mis. 2026)"
+            inputMode="numeric"
+            className="flex-1 bg-surface border border-line rounded-lg px-3 py-2 text-sm outline-none focus:border-accent2"
+          />
+        </div>
+      )}
 
       {loading && <div className="mt-4"><GridSkeleton count={6} /></div>}
 

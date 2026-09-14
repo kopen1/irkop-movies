@@ -128,6 +128,8 @@ export function Layout() {
             { to: "/discover", label: "Genre", icon: "🎬" },
             { to: "/movies", label: "Film", icon: "🎞" },
             { to: "/series", label: "Series", icon: "📺" },
+            { to: "/year", label: "Tahun", icon: "📅" },
+            { to: "/country", label: "Negara", icon: "🌍" },
             { to: "/search", label: "Cari", icon: "🔎" },
             { to: "/watchlist", label: "Watchlist", icon: "♥" },
             { to: "/history", label: "Riwayat", icon: "🕘" },

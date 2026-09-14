@@ -45,10 +45,16 @@ export const api = {
     request<{ items: CatalogItem[]; totalPages: number; genre: string; page: number }>(
       `/catalog/genre?g=${encodeURIComponent(g)}&page=${page}`
     ),
-  search: (q: string, page = 1) =>
-    request<{ items: CatalogItem[]; totalPages: number; query: string }>(
-      `/catalog/search?q=${encodeURIComponent(q)}&page=${page}`
-    ),
+  search: (q: string, page = 1, type = "", year = "") => {
+    const sp = new URLSearchParams({ q, page: String(page) });
+    if (type) sp.set("type", type);
+    if (year) sp.set("year", year);
+    return request<{ items: CatalogItem[]; totalPages: number; query: string }>(`/catalog/search?${sp.toString()}`);
+  },
+  year: (y: string, page = 1) =>
+    request<{ items: CatalogItem[]; totalPages: number; page: number }>(`/catalog/year?y=${encodeURIComponent(y)}&page=${page}`),
+  country: (c: string, page = 1) =>
+    request<{ items: CatalogItem[]; totalPages: number; page: number }>(`/catalog/country?c=${encodeURIComponent(c)}&page=${page}`),
   suggest: (q: string) =>
     request<{ items: { title: string; slug: string; type: string | null }[] }>(
       `/catalog/suggest?q=${encodeURIComponent(q)}`
@@ -69,10 +75,15 @@ export const api = {
     if (params.type) sp.set("type", params.type);
     return request<{ items: CatalogItem[]; basedOn: number }>(`/catalog/related?${sp.toString()}`);
   },
-  play: (slug: string) =>
-    request<{ fileUrl: string | null; proxy?: string; fallbackUrl?: string; reason?: string }>(
-      `/stream/play?slug=${encodeURIComponent(slug)}`
-    ),
+  play: (slug: string, server?: number) =>
+    request<{
+      fileUrl: string | null;
+      proxy?: string;
+      fallbackUrl?: string;
+      reason?: string;
+      servers?: { index: number; label: string }[];
+      current?: number;
+    }>(`/stream/play?slug=${encodeURIComponent(slug)}${server != null ? `&s=${server}` : ""}`),
 
   watchlist: () => request<{ items: WatchlistItem[] }>("/user/watchlist"),
   watchlistAdd: (payload: Record<string, unknown>) =>
@@ -114,4 +125,17 @@ export const api = {
       `/admin/stream-map/build?${sp.toString()}`
     );
   },
+  adminStreamMapList: (params: { q?: string; page?: number } = {}) => {
+    const sp = new URLSearchParams();
+    if (params.q) sp.set("q", params.q);
+    if (params.page) sp.set("page", String(params.page));
+    return request<{
+      items: { slug: string; host: string; player_id: string; updated_at: string }[];
+      total: number;
+      page: number;
+      size: number;
+    }>(`/admin/stream-map?${sp.toString()}`);
+  },
+  adminStreamMapDelete: (slug: string) =>
+    request<{ ok: boolean }>(`/admin/stream-map/${encodeURIComponent(slug)}`, { method: "DELETE" }),
 };

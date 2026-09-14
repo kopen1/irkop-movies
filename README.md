@@ -74,6 +74,7 @@ Untuk dev lokal, salin `.dev.vars.example` → `.dev.vars`.
 | `SESSION_SECRET` | ya | secret | string acak panjang; juga dipakai sebagai `?key=` untuk build mapping |
 | `RELAY_URL` | opsional | plain | `https://<tunnel>.trycloudflare.com/?url=` (khusus isi mapping) |
 | `VAULT_MAX_ID` | opsional | plain | angka ID tertinggi vault (kalau kosong: deteksi otomatis, di-cache di D1) |
+| `ADMIN_KEY` | opsional | secret | kalau diset, login admin butuh email + kunci ini |
 | `GOOGLE_CLIENT_ID` | opsional | plain | **legacy** (login admin sekarang pakai email; endpoint Google masih ada) |
 | `GOOGLE_CLIENT_SECRET` | opsional | secret | **legacy** |
 | `DB` | ya | D1 binding | nama binding **harus `DB`** (huruf besar), arahkan ke database `nontongo` |
@@ -99,7 +100,7 @@ Atau tempel isi `db/schema.sql` di **D1 Console** (dashboard). Semua perintah
 
 ### Tabel
 `users`, `admins`, `sessions`, `watchlist`, `history`, `favorites`, `ratings`,
-`feature_flags`, `curated_items`, `stream_map`, `audit_logs`.
+`feature_flags`, `curated_items`, `stream_map`, `stream_servers`, `audit_logs`.
 
 ### Tambah admin (login panel)
 ```sql
@@ -188,14 +189,33 @@ npm run dev                        # frontend :5173 (proxy /api → 8788)
 
 ---
 
+## Fitur UI
+
+- Home: hero, rail Lanjutkan Menonton (progress bar), Trending, rail per genre (Action/Drama/Horror), Rating, grid Jelajah ber-paginasi.
+- **Populer**, **Genre**, **Film**, **Series**, **Tahun**, **Negara** — semua ber-paginasi dengan info "Halaman X dari Y total halaman".
+- Pencarian: **autocomplete** + filter **tipe** & **tahun**.
+- Detail: sinopsis, rating, **bagikan**, rekomendasi serupa, **daftar episode** (per-season), **auto-next episode**.
+- Player ber-frame (tidak auto-fullscreen), **pilih server**, tandai selesai otomatis.
+- Watchlist & Riwayat lokal (localStorage, tanpa login).
+- PWA (installable) + halaman offline.
+- Admin: dashboard (termasuk jumlah mapping), kelola user/flag/audit, kelola `stream_map` (cari/hapus), build mapping dengan progres, cek health stream.
+
+---
+
 ## Endpoint API
 
 - **Auth**: `POST /api/auth/admin` (login email), `GET /api/auth/me`, `POST /api/auth/logout`
   (legacy: `GET /api/auth/google`, `/api/auth/google/callback`)
-- **Katalog**: `GET /api/catalog/trending | popular | top | latest | genre | list | search | suggest | episodes | related | detail/:slug`
-- **Stream**: `GET /api/stream/play?slug=`, `GET /api/stream/hls?u=`
+- **Katalog**: `GET /api/catalog/trending | popular | top | latest | genre | list | year | country | search | suggest | episodes | related | detail/:slug`
+  - `search` menerima `?q=&page=&type=movie|series&year=`
+  - `list` menerima `?t=movie|series&page=`
+- **Stream**: `GET /api/stream/play?slug=&s=<index-server>`, `GET /api/stream/hls?u=`
 - **User** (opsional/legacy): `/api/user/watchlist|history|favorites|ratings|profile|sessions`
-- **Admin**: `GET /api/admin/stats|users|flags|audit|stream-health|stream-map/build`, `PATCH/DELETE /api/admin/users/:id`, `POST /api/admin/flags`, `GET/POST/DELETE /api/admin/curated`
+- **Admin**: `GET /api/admin/stats|users|flags|audit|stream-health`, `PATCH/DELETE /api/admin/users/:id`, `POST /api/admin/flags`, `GET/POST/DELETE /api/admin/curated`
+  - `GET /api/admin/stream-map?q=&page=` (daftar mapping)
+  - `DELETE /api/admin/stream-map/:slug`
+  - `GET /api/admin/stream-map/build?limit=&page=` (batch)
+  - `GET /api/admin/stream-map/build-stream?limit=&page=` (NDJSON, progres per judul)
 - **Debug**: `GET /api/health`, `GET /api/debug/lk21`
 
 ---

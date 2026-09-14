@@ -15,12 +15,22 @@ export function Home() {
   const [heroIndex, setHeroIndex] = useState(0);
   const [page, setPage] = useState(1);
   const latestQuery = useAsync(() => api.latest(page), [page]);
+  const genresQuery = useAsync(
+    () => Promise.all([api.genre("action", 1), api.genre("drama", 1), api.genre("horror", 1)]),
+    []
+  );
   const history = useLibrary((s) => s.history);
   const trending = data?.[0].items ?? [];
   const top = data?.[1].items ?? [];
 
+  const genreRails = [
+    { title: "🎯 Action", items: genresQuery.data?.[0].items ?? [] },
+    { title: "💧 Drama", items: genresQuery.data?.[1].items ?? [] },
+    { title: "👻 Horror", items: genresQuery.data?.[2].items ?? [] },
+  ];
+
   const continueItems: CatalogItem[] = history
-    .filter((h) => h.positionSec > 0)
+    .filter((h) => h.positionSec > 0 && !(h.durationSec > 0 && h.positionSec >= h.durationSec - 10))
     .slice(0, 10)
     .map((h) => ({
       slug: h.slug,
@@ -86,7 +96,10 @@ export function Home() {
       )}
 
       <Rail title="▶ Lanjutkan Menonton" items={continueItems} />
-      <Rail title="🔥 Trending Hari Ini" items={trending} action={<Link to="/discover">Lihat semua</Link>} />
+      <Rail title="🔥 Trending Hari Ini" items={trending} action={<Link to="/popular">Lihat semua</Link>} />
+      {genreRails.map((r) => (
+        <Rail key={r.title} title={r.title} items={r.items} />
+      ))}
       <Rail title="⭐ Rating Tertinggi" items={top} />
 
       <section id="jelajah" className="pb-8">

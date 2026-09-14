@@ -2,8 +2,9 @@ import type { RouteContext } from "../env";
 import { error, json } from "../http";
 import { DEFAULT_LK21_BASE, LK21_USER_AGENT, ufetch } from "../lk21/common";
 import { fetchDetailHtml } from "../lk21/detail";
-import { resolveByHostId, resolveFirstServer } from "../lk21/stream";
-import { getStreamMap, saveStreamMap } from "../lk21/streamMap";
+import { parseAllServers, resolveByHostId, resolveServerRef } from "../lk21/stream";
+import type { PlayerRef } from "../lk21/stream";
+import { getServers, getStreamMap, saveServers, saveStreamMap } from "../lk21/streamMap";
 
 function base(ctx: RouteContext): string {
   return ctx.env.LK21_BASE || DEFAULT_LK21_BASE;
@@ -11,6 +12,10 @@ function base(ctx: RouteContext): string {
 
 function proxyUrl(fileUrl: string): string {
   return "/api/stream/hls?u=" + encodeURIComponent(fileUrl);
+}
+
+function labels(refs: PlayerRef[]) {
+  return refs.map((r, i) => ({ index: i, label: r.host }));
 }
 
 export async function play(ctx: RouteContext): Promise<Response> {
@@ -21,30 +26,73 @@ export async function play(ctx: RouteContext): Promise<Response> {
   const fallbackUrl = `${mirror}/${encodeURIComponent(slug)}/`;
   const referer = `${base(ctx)}/${slug}`;
 
-  // 1) Pakai cache mapping (host+id) -> resolve langsung via videonode/playcdn.
-  //    Host ini TIDAK diblokir dari Worker, jadi tidak perlu halaman detail.
-  const cached = await getStreamMap(ctx, slug);
-  if (cached) {
+  const idxRaw = ctx.url.searchParams.get("s");
+  const idx = idxRaw != null ? Math.max(0, Number(idxRaw) || 0) : 0;
+
+  // 1) Server dari cache (tidak butuh relay).
+  const cachedServers = await getServers(ctx, slug);
+  if (cachedServers.length) {
+    const ref = cachedServers[Math.min(idx, cachedServers.length - 1)];
     try {
-      const file = await resolveByHostId(cached.origin, cached.host, cached.player_id, referer);
-      if (file) return json({ fileUrl: file, proxy: proxyUrl(file), cached: true, fallbackUrl });
+      const file = await resolveServerRef(ref, referer);
+      if (file) {
+        return json({
+          fileUrl: file,
+          proxy: proxyUrl(file),
+          cached: true,
+          fallbackUrl,
+          servers: labels(cachedServers),
+          current: idx,
+        });
+      }
     } catch {
-      /* cache kedaluwarsa -> coba refresh di bawah */
+      /* coba refresh di bawah */
+    }
+  } else {
+    // Kompatibilitas: stream_map lama (single server).
+    const cached = await getStreamMap(ctx, slug);
+    if (cached) {
+      try {
+        const file = await resolveByHostId(cached.origin, cached.host, cached.player_id, referer);
+        if (file) {
+          return json({
+            fileUrl: file,
+            proxy: proxyUrl(file),
+            cached: true,
+            fallbackUrl,
+            servers: [{ index: 0, label: cached.host }],
+            current: 0,
+          });
+        }
+      } catch {
+        /* refresh di bawah */
+      }
     }
   }
 
-  // 2) Ambil halaman detail (langsung; kalau diblokir, lewat relay bila ada)
-  //    untuk mengisi/memperbarui cache.
+  // 2) Ambil halaman detail (langsung; kalau diblokir, lewat relay) → simpan mapping.
+  let refs: PlayerRef[] = [];
   try {
     const { html, url } = await fetchDetailHtml(slug, base(ctx));
-    const found = await resolveFirstServer(html, url);
-    if (found) {
-      await saveStreamMap(ctx, slug, found.ref.origin, found.ref.host, found.ref.id);
-      return json({ fileUrl: found.fileUrl, proxy: proxyUrl(found.fileUrl), cached: false, fallbackUrl });
+    refs = parseAllServers(html);
+    if (refs.length) {
+      await saveStreamMap(ctx, slug, refs[0].origin, refs[0].host, refs[0].id);
+      await saveServers(ctx, slug, refs);
+      const ref = refs[Math.min(idx, refs.length - 1)];
+      const file = await resolveServerRef(ref, url);
+      if (file) {
+        return json({
+          fileUrl: file,
+          proxy: proxyUrl(file),
+          cached: false,
+          fallbackUrl,
+          servers: labels(refs),
+          current: idx,
+        });
+      }
     }
-    return json({ fileUrl: null, fallbackUrl, reason: "stream-unavailable" });
+    return json({ fileUrl: null, fallbackUrl, reason: "stream-unavailable", servers: labels(refs), current: idx });
   } catch (e) {
-    // Biasanya 403 dari halaman detail saat Worker diblokir dan tanpa relay.
     return json({ fileUrl: null, fallbackUrl, reason: (e as Error).message });
   }
 }

@@ -1,4 +1,4 @@
-import { Suspense, lazy, useMemo, useState } from "react";
+import { Suspense, lazy, useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { api } from "../lib/api";
 import { useAsync } from "../lib/useAsync";
@@ -42,6 +42,33 @@ export function Detail() {
     [slug, isSeries]
   );
   const [playSlug, setPlaySlug] = useState<string | null>(null);
+  const [seasonSel, setSeasonSel] = useState<number | null>(null);
+
+  const metaTitle = data?.title || stateItem?.title;
+  useEffect(() => {
+    if (metaTitle) document.title = `${metaTitle} — NontonGo`;
+    return () => {
+      document.title = "NontonGo";
+    };
+  }, [metaTitle]);
+
+  useEffect(() => {
+    const desc = data?.overview || "";
+    let el = document.querySelector('meta[name="description"]') as HTMLMetaElement | null;
+    if (!el) {
+      el = document.createElement("meta");
+      el.name = "description";
+      document.head.appendChild(el);
+    }
+    el.content = desc ? desc.slice(0, 160) : "Nonton film & series streaming.";
+  }, [data?.overview]);
+
+  const epItems = episodesQuery.data?.items ?? [];
+  const seasons = [...new Set(epItems.map((e) => e.season))].sort((a, b) => a - b);
+  const activeSeason = seasonSel ?? seasons[0] ?? 1;
+  const seasonEpisodes = epItems.filter((e) => e.season === activeSeason);
+  const currentEpIndex = playSlug ? epItems.findIndex((e) => e.slug === playSlug) : -1;
+  const nextEp = currentEpIndex >= 0 ? epItems[currentEpIndex + 1] : null;
 
   const inWatchlist = useMemo(() => watchlist.some((i) => i.slug === slug), [watchlist, slug]);
 
@@ -189,23 +216,40 @@ export function Detail() {
           <h3 className="font-bold mb-3">📺 Episode</h3>
           {episodesQuery.loading ? (
             <p className="text-xs text-muted">Memuat episode...</p>
-          ) : (episodesQuery.data?.items?.length ?? 0) === 0 ? (
+          ) : epItems.length === 0 ? (
             <p className="text-xs text-muted">Daftar episode butuh relay aktif.</p>
           ) : (
-            <div className="grid grid-cols-4 gap-2">
-              {episodesQuery.data!.items.map((ep) => (
-                <button
-                  key={ep.slug}
-                  onClick={() => {
-                    setPlaySlug(ep.slug);
-                    setPlaying(true);
-                  }}
-                  className="bg-surface border border-line rounded-lg py-2 text-xs hover:border-accent2"
-                >
-                  S{ep.season}E{ep.episode}
-                </button>
-              ))}
-            </div>
+            <>
+              {seasons.length > 1 && (
+                <div className="flex gap-2 mb-3 overflow-x-auto no-scrollbar">
+                  {seasons.map((s) => (
+                    <button
+                      key={s}
+                      onClick={() => setSeasonSel(s)}
+                      className={`whitespace-nowrap px-3 py-1.5 rounded-full border text-xs font-semibold ${
+                        activeSeason === s ? "bg-accent border-accent text-white" : "bg-surface border-line text-muted"
+                      }`}
+                    >
+                      Season {s}
+                    </button>
+                  ))}
+                </div>
+              )}
+              <div className="grid grid-cols-4 gap-2">
+                {seasonEpisodes.map((ep) => (
+                  <button
+                    key={ep.slug}
+                    onClick={() => {
+                      setPlaySlug(ep.slug);
+                      setPlaying(true);
+                    }}
+                    className="bg-surface border border-line rounded-lg py-2 text-xs hover:border-accent2"
+                  >
+                    E{ep.episode}
+                  </button>
+                ))}
+              </div>
+            </>
           )}
         </div>
       )}
@@ -236,6 +280,10 @@ export function Detail() {
               postType: view.type,
               title: view.title,
               poster: view.poster,
+            }}
+            autoNextSlug={nextEp?.slug ?? null}
+            onAutoNext={() => {
+              if (nextEp) setPlaySlug(nextEp.slug);
             }}
             onClose={() => setPlaying(false)}
           />

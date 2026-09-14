@@ -1,4 +1,50 @@
 import type { RouteContext } from "../env";
+import type { PlayerRef } from "./stream";
+
+export interface ServerRow {
+  idx: number;
+  origin: string;
+  host: string;
+  player_id: string;
+}
+
+export async function getServers(ctx: RouteContext, slug: string): Promise<PlayerRef[]> {
+  try {
+    const rows = await ctx.env.DB.prepare(
+      "SELECT idx, origin, host, player_id FROM stream_servers WHERE slug = ? ORDER BY idx ASC"
+    )
+      .bind(slug)
+      .all<ServerRow>();
+    return (rows.results || []).map((r) => ({ origin: r.origin, host: r.host, id: r.player_id }));
+  } catch {
+    return [];
+  }
+}
+
+export async function saveServers(ctx: RouteContext, slug: string, refs: PlayerRef[]): Promise<void> {
+  if (!refs.length) return;
+  try {
+    await ctx.env.DB.prepare("DELETE FROM stream_servers WHERE slug = ?").bind(slug).run();
+    for (let i = 0; i < refs.length; i++) {
+      await ctx.env.DB.prepare(
+        "INSERT OR REPLACE INTO stream_servers (slug, idx, origin, host, player_id) VALUES (?, ?, ?, ?, ?)"
+      )
+        .bind(slug, i, refs[i].origin, refs[i].host, refs[i].id)
+        .run();
+    }
+  } catch {
+    /* tabel belum ada -> abaikan */
+  }
+}
+
+export async function deleteStreamMap(ctx: RouteContext, slug: string): Promise<void> {
+  try {
+    await ctx.env.DB.prepare("DELETE FROM stream_map WHERE slug = ?").bind(slug).run();
+    await ctx.env.DB.prepare("DELETE FROM stream_servers WHERE slug = ?").bind(slug).run();
+  } catch {
+    /* abaikan */
+  }
+}
 
 export interface StreamMapRow {
   slug: string;

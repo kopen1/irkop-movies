@@ -11,29 +11,42 @@ interface PlayerMeta {
   poster: string | null;
 }
 
-export function HlsPlayer({ meta, onClose }: { meta: PlayerMeta; onClose: () => void }) {
+interface Props {
+  meta: PlayerMeta;
+  onClose: () => void;
+  autoNextSlug?: string | null;
+  onAutoNext?: () => void;
+}
+
+export function HlsPlayer({ meta, onClose, autoNextSlug, onAutoNext }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const onCloseRef = useRef(onClose);
+  const onAutoNextRef = useRef(onAutoNext);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [fallback, setFallback] = useState<string | null>(null);
+  const [servers, setServers] = useState<{ index: number; label: string }[]>([]);
+  const [server, setServer] = useState(0);
 
   useEffect(() => {
     onCloseRef.current = onClose;
-  }, [onClose]);
+    onAutoNextRef.current = onAutoNext;
+  }, [onClose, onAutoNext]);
 
   useEffect(() => {
     let hls: Hls | null = null;
     let cancelled = false;
     const video = videoRef.current;
+    setError(null);
+    setLoading(true);
 
     (async () => {
       try {
-        const res = await api.play(meta.slug);
+        const res = await api.play(meta.slug, server);
         if (cancelled || !video) return;
         if (res.fallbackUrl) setFallback(res.fallbackUrl);
+        if (res.servers) setServers(res.servers);
 
-        // Worker diblokir upstream -> buka mirror di tab baru (browser lolos challenge)
         if (!res.fileUrl) {
           if (res.fallbackUrl) window.open(res.fallbackUrl, "_blank", "noopener");
           onCloseRef.current?.();
@@ -69,30 +82,41 @@ export function HlsPlayer({ meta, onClose }: { meta: PlayerMeta; onClose: () => 
       cancelled = true;
       if (hls) hls.destroy();
     };
-  }, [meta.slug]);
+  }, [meta.slug, server]);
 
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
     let last = 0;
+    const save = (positionSec: number) =>
+      useLibrary.getState().upsertHistory({
+        slug: meta.slug,
+        title: meta.title,
+        poster: meta.poster,
+        type: meta.postType,
+        positionSec,
+        durationSec: Math.floor(video.duration || 0),
+        updatedAt: Date.now(),
+      });
     const onTime = () => {
       const now = Math.floor(video.currentTime || 0);
       if (now - last >= 15) {
         last = now;
-        useLibrary.getState().upsertHistory({
-          slug: meta.slug,
-          title: meta.title,
-          poster: meta.poster,
-          type: meta.postType,
-          positionSec: now,
-          durationSec: Math.floor(video.duration || 0),
-          updatedAt: Date.now(),
-        });
+        save(now);
       }
     };
+    const onEnded = () => {
+      const dur = Math.floor(video.duration || 0);
+      save(dur); // posisi = durasi → keluar dari "Lanjutkan Menonton"
+      if (autoNextSlug && onAutoNextRef.current) onAutoNextRef.current();
+    };
     video.addEventListener("timeupdate", onTime);
-    return () => video.removeEventListener("timeupdate", onTime);
-  }, [meta]);
+    video.addEventListener("ended", onEnded);
+    return () => {
+      video.removeEventListener("timeupdate", onTime);
+      video.removeEventListener("ended", onEnded);
+    };
+  }, [meta, autoNextSlug]);
 
   function toggleFullscreen() {
     const video = videoRef.current;
@@ -114,9 +138,22 @@ export function HlsPlayer({ meta, onClose }: { meta: PlayerMeta; onClose: () => 
             </svg>
           </button>
           <p className="text-sm font-semibold truncate">{meta.title}</p>
+          {servers.length > 1 && (
+            <select
+              value={server}
+              onChange={(e) => setServer(Number(e.target.value))}
+              className="ml-auto bg-app border border-line rounded-lg px-2 py-1 text-xs"
+            >
+              {servers.map((s) => (
+                <option key={s.index} value={s.index}>
+                  Server {s.label}
+                </option>
+              ))}
+            </select>
+          )}
           <button
             onClick={toggleFullscreen}
-            className="ml-auto w-9 h-9 rounded-full grid place-items-center hover:bg-white/10"
+            className={`${servers.length > 1 ? "" : "ml-auto"} w-9 h-9 rounded-full grid place-items-center hover:bg-white/10`}
             aria-label="Layar penuh"
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -137,12 +174,7 @@ export function HlsPlayer({ meta, onClose }: { meta: PlayerMeta; onClose: () => 
               <div>
                 <p>{error}</p>
                 {fallback && (
-                  <a
-                    className="mt-4 inline-block text-accent2 underline"
-                    href={fallback}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
+                  <a className="mt-4 inline-block text-accent2 underline" href={fallback} target="_blank" rel="noopener noreferrer">
                     Buka di mirror
                   </a>
                 )}

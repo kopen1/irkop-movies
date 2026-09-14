@@ -10,6 +10,8 @@ export interface Env {
   VAULT_MAX_ID?: string;
   // URL mirror untuk fallback "Tonton" di tab baru (browser lolos challenge).
   PLAY_MIRROR?: string;
+  // Opsional: kalau diset, login admin butuh email + kunci ini.
+  ADMIN_KEY?: string;
 }
 
 export interface AppContext {

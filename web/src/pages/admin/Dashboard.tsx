@@ -10,8 +10,8 @@ export function Dashboard() {
   const cards = [
     { label: "Total User", value: data.totals.users },
     { label: "Sesi Aktif", value: data.totals.activeSessions },
+    { label: "Mapping Stream", value: data.totals.streamMap },
     { label: "Watchlist", value: data.totals.watchlist },
-    { label: "Riwayat", value: data.totals.history },
   ];
 
   return (

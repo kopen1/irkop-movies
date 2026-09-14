@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { api } from "../../lib/api";
+import { useAsync } from "../../lib/useAsync";
 import { useToast } from "../../stores/toast";
 
 interface BuildResult {
@@ -11,14 +12,24 @@ interface BuildResult {
 
 export function Streams() {
   const toast = useToast((s) => s.show);
+
+  // --- Cek satu judul ---
   const [slug, setSlug] = useState("tarung-unforgiven-2026");
   const [result, setResult] = useState<{ ok: boolean; fileUrl?: string; error?: string } | null>(null);
   const [loading, setLoading] = useState(false);
 
+  // --- Build batch ---
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
   const [building, setBuilding] = useState(false);
+  const [progress, setProgress] = useState<string[]>([]);
   const [buildResult, setBuildResult] = useState<BuildResult | null>(null);
+
+  // --- Kelola mapping ---
+  const [q, setQ] = useState("");
+  const [listPage, setListPage] = useState(1);
+  const [version, setVersion] = useState(0);
+  const listQuery = useAsync(() => api.adminStreamMapList({ q, page: listPage }), [q, listPage, version]);
 
   async function check() {
     setLoading(true);
@@ -32,13 +43,37 @@ export function Streams() {
     }
   }
 
-  async function build() {
+  async function buildStreaming() {
     setBuilding(true);
+    setProgress([]);
     setBuildResult(null);
     try {
-      const res = await api.adminStreamMapBuild({ page, limit });
-      setBuildResult(res);
-      toast(`built ${res.built} / ${res.total}`);
+      const sp = new URLSearchParams({ page: String(page), limit: String(limit) });
+      const res = await fetch(`/api/admin/stream-map/build-stream?${sp.toString()}`, { credentials: "include" });
+      if (!res.ok || !res.body) throw new Error(`HTTP ${res.status}`);
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buf = "";
+      const lines: string[] = [];
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buf += decoder.decode(value, { stream: true });
+        const parts = buf.split("\n");
+        buf = parts.pop() || "";
+        for (const line of parts) {
+          if (!line.trim()) continue;
+          const obj = JSON.parse(line);
+          if (obj.done) {
+            setBuildResult({ total: obj.total, built: obj.built, skipped: obj.skipped, failed: obj.failed });
+          } else {
+            lines.push(`${obj.status === "built" ? "✓" : obj.status === "skipped" ? "•" : "✕"} ${obj.slug}`);
+            setProgress([...lines]);
+          }
+        }
+      }
+      setVersion((v) => v + 1);
+      toast("Build selesai");
     } catch (e) {
       toast((e as Error).message);
     } finally {
@@ -46,28 +81,24 @@ export function Streams() {
     }
   }
 
-  async function buildOne() {
-    setBuilding(true);
-    setBuildResult(null);
+  async function remove(s: string) {
+    if (!confirm(`Hapus mapping "${s}"?`)) return;
     try {
-      const res = await api.adminStreamMapBuild({ slug: slug.trim(), limit: 1 });
-      setBuildResult(res);
-      toast(res.built ? "Mapping disimpan" : "Gagal mapping (relay mati?)");
+      await api.adminStreamMapDelete(s);
+      toast("Mapping dihapus");
+      setVersion((v) => v + 1);
     } catch (e) {
       toast((e as Error).message);
-    } finally {
-      setBuilding(false);
     }
   }
+
+  const mapItems = listQuery.data?.items ?? [];
+  const mapTotal = listQuery.data?.total ?? 0;
 
   return (
     <div className="px-4 space-y-6">
       <section>
         <h2 className="font-bold mb-2">Isi mapping stream (butuh relay aktif)</h2>
-        <p className="text-xs text-muted mb-3">
-          Mengambil host+id player dari halaman detail lalu menyimpannya. Setelah tersimpan, judul itu
-          bisa ditonton in-app tanpa relay.
-        </p>
         <div className="flex items-center gap-2 mb-3">
           <label className="text-xs text-muted">Halaman</label>
           <input
@@ -87,24 +118,31 @@ export function Streams() {
             className="w-20 bg-surface border border-line rounded-lg px-2 py-2 text-sm"
           />
           <button
-            onClick={build}
+            onClick={buildStreaming}
             disabled={building}
             className="bg-accent hover:bg-accent2 rounded-lg px-4 py-2 text-sm font-bold disabled:opacity-50"
           >
-            {building ? "..." : "Build"}
+            {building ? "Memproses..." : "Build + progres"}
           </button>
         </div>
 
         {buildResult && (
-          <div className="rounded-xl border border-line bg-surface p-3 text-sm">
+          <div className="rounded-xl border border-line bg-surface p-3 text-sm mb-2">
             total <b>{buildResult.total}</b> · built <b className="text-green-400">{buildResult.built}</b> · skipped{" "}
             {buildResult.skipped} · failed <b className="text-accent2">{buildResult.failed}</b>
+          </div>
+        )}
+        {progress.length > 0 && (
+          <div className="max-h-40 overflow-y-auto rounded-xl border border-line bg-black/30 p-2 text-[11px] font-mono">
+            {progress.map((p, i) => (
+              <div key={i}>{p}</div>
+            ))}
           </div>
         )}
       </section>
 
       <section>
-        <h2 className="font-bold mb-2">Cek / build satu judul</h2>
+        <h2 className="font-bold mb-2">Cek satu judul</h2>
         <div className="flex gap-2">
           <input
             value={slug}
@@ -119,15 +157,7 @@ export function Streams() {
           >
             {loading ? "..." : "Cek"}
           </button>
-          <button
-            onClick={buildOne}
-            disabled={building}
-            className="bg-accent hover:bg-accent2 rounded-lg px-4 text-sm font-bold disabled:opacity-50"
-          >
-            Build 1
-          </button>
         </div>
-
         {result && (
           <div className={`mt-3 rounded-xl border p-3 text-sm ${result.ok ? "border-green-500/40 bg-green-500/10" : "border-accent/40 bg-accent/10"}`}>
             <p className="font-bold">{result.ok ? "✅ Stream ditemukan" : "❌ Gagal"}</p>
@@ -136,6 +166,63 @@ export function Streams() {
           </div>
         )}
       </section>
+
+      <section>
+        <h2 className="font-bold mb-2">
+          Mapping tersimpan{mappingCountLabel(mapTotal)}
+        </h2>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            setListPage(1);
+          }}
+          className="flex gap-2 mb-3"
+        >
+          <input
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Cari slug..."
+            className="flex-1 bg-surface border border-line rounded-lg px-3 py-2 text-sm outline-none focus:border-accent2"
+          />
+        </form>
+
+        <div className="space-y-1.5">
+          {mapItems.map((m) => (
+            <div key={m.slug} className="flex items-center gap-2 bg-surface border border-line rounded-lg px-3 py-2 text-xs">
+              <div className="min-w-0">
+                <p className="font-semibold truncate">{m.slug}</p>
+                <p className="text-[10px] text-muted">{m.host} · {m.updated_at}</p>
+              </div>
+              <button onClick={() => remove(m.slug)} className="ml-auto text-accent2 px-2 py-1 rounded hover:bg-white/10">
+                Hapus
+              </button>
+            </div>
+          ))}
+          {mapItems.length === 0 && <p className="text-xs text-muted">Belum ada mapping.</p>}
+        </div>
+
+        <div className="flex justify-center gap-3 mt-3">
+          <button
+            disabled={listPage <= 1}
+            onClick={() => setListPage((p) => Math.max(1, p - 1))}
+            className="px-3 py-1.5 rounded-lg bg-surface border border-line text-xs disabled:opacity-40"
+          >
+            ← Prev
+          </button>
+          <span className="px-2 py-1.5 text-xs">Hal. {listPage}</span>
+          <button
+            disabled={listPage * 20 >= mapTotal}
+            onClick={() => setListPage((p) => p + 1)}
+            className="px-3 py-1.5 rounded-lg bg-surface border border-line text-xs disabled:opacity-40"
+          >
+            Next →
+          </button>
+        </div>
+      </section>
     </div>
   );
+}
+
+function mappingCountLabel(total: number): string {
+  return total ? ` (${total})` : "";
 }

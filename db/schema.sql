@@ -106,6 +106,16 @@ CREATE TABLE IF NOT EXISTS stream_map (
   updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
+-- Daftar server player per judul (untuk pilih server di player).
+CREATE TABLE IF NOT EXISTS stream_servers (
+  slug      TEXT NOT NULL,
+  idx       INTEGER NOT NULL,
+  origin    TEXT NOT NULL,
+  host      TEXT NOT NULL,
+  player_id TEXT NOT NULL,
+  PRIMARY KEY (slug, idx)
+);
+
 CREATE TABLE IF NOT EXISTS audit_logs (
   id       INTEGER PRIMARY KEY AUTOINCREMENT,
   actor_id INTEGER,

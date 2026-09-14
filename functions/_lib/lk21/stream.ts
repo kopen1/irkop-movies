@@ -60,6 +60,25 @@ export async function resolveByHostId(
   return vj?.fileUrl ?? null;
 }
 
+// Semua server (host+id) dari halaman detail, tanpa resolve.
+export function parseAllServers(html: string): PlayerRef[] {
+  const refs: PlayerRef[] = [];
+  const seen = new Set<string>();
+  for (const server of extractServers(html)) {
+    const ref = parseServer(server);
+    if (!ref) continue;
+    const key = `${ref.host}/${ref.id}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    refs.push(ref);
+  }
+  return refs;
+}
+
+export async function resolveServerRef(ref: PlayerRef, referer: string): Promise<string | null> {
+  return resolveByHostId(ref.origin, ref.host, ref.id, referer);
+}
+
 // Coba semua server dari halaman detail, kembalikan m3u8 pertama yang berhasil.
 export async function resolveStream(detailHtml: string, detailUrl: string): Promise<string | null> {
   for (const server of extractServers(detailHtml)) {

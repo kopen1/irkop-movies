@@ -1,4 +1,5 @@
 import type { RouteContext } from "../env";
+import { cachedJson } from "../cache";
 import { error, json } from "../http";
 import { lk21ListingPage } from "../lk21/catalog";
 import { DEFAULT_LK21_BASE } from "../lk21/common";
@@ -78,41 +79,73 @@ async function feed(ctx: RouteContext, path: string, page: number, opts: FeedOpt
 }
 
 export async function trending(ctx: RouteContext): Promise<Response> {
-  const { items, totalPages } = await feed(ctx, "/populer/page/1", 1);
-  return json({ items, totalPages, page: 1, type: "popular" });
+  return cachedJson(ctx, 300, async () => {
+    const { items, totalPages } = await feed(ctx, "/populer/page/1", 1);
+    return json({ items, totalPages, page: 1, type: "popular" });
+  });
 }
 
 export async function popular(ctx: RouteContext): Promise<Response> {
-  const page = Number(ctx.url.searchParams.get("page") || "1") || 1;
-  const { items, totalPages } = await feed(ctx, `/populer/page/${page}`, page);
-  return json({ items, totalPages, page });
+  return cachedJson(ctx, 300, async () => {
+    const page = Number(ctx.url.searchParams.get("page") || "1") || 1;
+    const { items, totalPages } = await feed(ctx, `/populer/page/${page}`, page);
+    return json({ items, totalPages, page });
+  });
 }
 
 export async function top(ctx: RouteContext): Promise<Response> {
-  const { items, totalPages } = await feed(ctx, "/rating/page/1", 2, { sortByRating: true });
-  return json({ items, totalPages, page: 2 });
+  return cachedJson(ctx, 300, async () => {
+    const { items, totalPages } = await feed(ctx, "/rating/page/1", 2, { sortByRating: true });
+    return json({ items, totalPages, page: 2 });
+  });
 }
 
 export async function latest(ctx: RouteContext): Promise<Response> {
-  const page = Number(ctx.url.searchParams.get("page") || "1") || 1;
-  const { items, totalPages } = await feed(ctx, `/latest/page/${page}`, page);
-  return json({ items, totalPages, page });
+  return cachedJson(ctx, 300, async () => {
+    const page = Number(ctx.url.searchParams.get("page") || "1") || 1;
+    const { items, totalPages } = await feed(ctx, `/latest/page/${page}`, page);
+    return json({ items, totalPages, page });
+  });
 }
 
 export async function genre(ctx: RouteContext): Promise<Response> {
-  const g = ctx.url.searchParams.get("g") || "action";
-  const page = Number(ctx.url.searchParams.get("page") || "1") || 1;
-  const { items, totalPages } = await feed(ctx, `/genre/${encodeURIComponent(g)}/page/${page}`, page);
-  return json({ items, totalPages, genre: g, page });
+  return cachedJson(ctx, 300, async () => {
+    const g = ctx.url.searchParams.get("g") || "action";
+    const page = Number(ctx.url.searchParams.get("page") || "1") || 1;
+    const { items, totalPages } = await feed(ctx, `/genre/${encodeURIComponent(g)}/page/${page}`, page);
+    return json({ items, totalPages, genre: g, page });
+  });
 }
 
 export async function list(ctx: RouteContext): Promise<Response> {
-  const type = ctx.url.searchParams.get("t") === "series" ? "series" : "movie";
-  const page = Number(ctx.url.searchParams.get("page") || "1") || 1;
-  const size = 24;
-  const items = await vaultCatalogFiltered(ctx, page, size, type).catch(() => [] as CatalogItem[]);
-  const totalPages = await estimateTotalPages(ctx, size);
-  return json({ items, totalPages, page, type });
+  return cachedJson(ctx, 300, async () => {
+    const type = ctx.url.searchParams.get("t") === "series" ? "series" : "movie";
+    const page = Number(ctx.url.searchParams.get("page") || "1") || 1;
+    const size = 24;
+    const items = await vaultCatalogFiltered(ctx, page, size, type).catch(() => [] as CatalogItem[]);
+    const totalPages = await estimateTotalPages(ctx, size);
+    return json({ items, totalPages, page, type });
+  });
+}
+
+export async function byYear(ctx: RouteContext): Promise<Response> {
+  return cachedJson(ctx, 600, async () => {
+    const y = ctx.url.searchParams.get("y") || "";
+    const page = Number(ctx.url.searchParams.get("page") || "1") || 1;
+    if (!y) return json({ items: [], totalPages: 1, page, y });
+    const { items, totalPages } = await feed(ctx, `/year/${encodeURIComponent(y)}/page/${page}`, page);
+    return json({ items, totalPages, page, y });
+  });
+}
+
+export async function byCountry(ctx: RouteContext): Promise<Response> {
+  return cachedJson(ctx, 600, async () => {
+    const c = ctx.url.searchParams.get("c") || "";
+    const page = Number(ctx.url.searchParams.get("page") || "1") || 1;
+    if (!c) return json({ items: [], totalPages: 1, page, c });
+    const { items, totalPages } = await feed(ctx, `/country/${encodeURIComponent(c)}/page/${page}`, page);
+    return json({ items, totalPages, page, c });
+  });
 }
 
 export async function episodes(ctx: RouteContext): Promise<Response> {
@@ -178,11 +211,18 @@ async function searchViaVault(ctx: RouteContext, q: string): Promise<CatalogItem
 export async function search(ctx: RouteContext): Promise<Response> {
   const q = (ctx.url.searchParams.get("q") || "").trim();
   const page = Number(ctx.url.searchParams.get("page") || "1") || 1;
+  const type = ctx.url.searchParams.get("type") || "";
+  const year = ctx.url.searchParams.get("year") || "";
   if (!q) return json({ items: [], totalPages: 0, query: q });
+
+  const filter = (items: CatalogItem[]) =>
+    items.filter(
+      (i) => (!type || i.type === type) && (!year || String(i.year || "") === String(year))
+    );
 
   try {
     const result = await lk21Search(q, page);
-    return json({ ...result, query: q, source: "search" });
+    return json({ ...result, items: filter(result.items), query: q, source: "search" });
   } catch {
     /* fallback */
   }
@@ -191,7 +231,7 @@ export async function search(ctx: RouteContext): Promise<Response> {
   if (!items.length) {
     items = await searchViaVault(ctx, q).catch(() => [] as CatalogItem[]);
   }
-  return json({ items, totalPages: 1, query: q, source: "fallback" });
+  return json({ items: filter(items), totalPages: 1, query: q, source: "fallback" });
 }
 
 export async function suggest(ctx: RouteContext): Promise<Response> {

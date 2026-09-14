@@ -2,8 +2,8 @@ import type { RouteContext } from "../env";
 import { error, json } from "../http";
 import { DEFAULT_LK21_BASE } from "../lk21/common";
 import { fetchDetailHtml } from "../lk21/detail";
-import { resolveFirstServer, resolveStream } from "../lk21/stream";
-import { getStreamMap, saveStreamMap } from "../lk21/streamMap";
+import { parseAllServers, resolveFirstServer, resolveStream } from "../lk21/stream";
+import { deleteStreamMap, getStreamMap, saveServers, saveStreamMap } from "../lk21/streamMap";
 import { vaultCatalog } from "../lk21/vault";
 
 function ensureAdmin(ctx: RouteContext): Response | null {
@@ -29,11 +29,12 @@ async function audit(ctx: RouteContext, action: string, target: string, meta?: u
 export async function stats(ctx: RouteContext): Promise<Response> {
   const guard = ensureAdmin(ctx);
   if (guard) return guard;
-  const [users, sessions, watchlist, history] = await Promise.all([
+  const [users, sessions, watchlist, history, streamMap] = await Promise.all([
     ctx.env.DB.prepare("SELECT COUNT(*) AS n FROM users").first<{ n: number }>(),
     ctx.env.DB.prepare("SELECT COUNT(*) AS n FROM sessions WHERE expires_at > ?").bind(new Date().toISOString()).first<{ n: number }>(),
     ctx.env.DB.prepare("SELECT COUNT(*) AS n FROM watchlist").first<{ n: number }>(),
     ctx.env.DB.prepare("SELECT COUNT(*) AS n FROM history").first<{ n: number }>(),
+    ctx.env.DB.prepare("SELECT COUNT(*) AS n FROM stream_map").first<{ n: number }>(),
   ]);
   const recent = await ctx.env.DB.prepare(
     "SELECT id, email, name, role, status, created_at, last_login_at FROM users ORDER BY created_at DESC LIMIT 5"
@@ -44,6 +45,7 @@ export async function stats(ctx: RouteContext): Promise<Response> {
       activeSessions: sessions?.n ?? 0,
       watchlist: watchlist?.n ?? 0,
       history: history?.n ?? 0,
+      streamMap: streamMap?.n ?? 0,
     },
     recentUsers: recent.results || [],
   });
@@ -218,9 +220,11 @@ export async function streamMapBuild(ctx: RouteContext): Promise<Response> {
     }
     try {
       const { html, url } = await fetchDetailHtml(slug, base);
+      const refs = parseAllServers(html);
       const found = await resolveFirstServer(html, url);
       if (found) {
         await saveStreamMap(ctx, slug, found.ref.origin, found.ref.host, found.ref.id);
+        await saveServers(ctx, slug, refs);
         built++;
       } else {
         failed++;
@@ -231,6 +235,89 @@ export async function streamMapBuild(ctx: RouteContext): Promise<Response> {
   }
   await audit(ctx, "stream_map.build", single || `top:${limit}`, { built, skipped, failed });
   return json({ total: slugs.length, built, skipped, failed });
+}
+
+export async function streamMapList(ctx: RouteContext): Promise<Response> {
+  const guard = ensureAdmin(ctx);
+  if (guard) return guard;
+  const q = (ctx.url.searchParams.get("q") || "").trim();
+  const page = Math.max(1, Number(ctx.url.searchParams.get("page") || "1") || 1);
+  const size = 20;
+  const where = q ? "WHERE slug LIKE ?" : "";
+  const binds: unknown[] = q ? [`%${q}%`] : [];
+  const total = await ctx.env.DB.prepare(`SELECT COUNT(*) AS n FROM stream_map ${where}`)
+    .bind(...binds)
+    .first<{ n: number }>();
+  const rows = await ctx.env.DB.prepare(
+    `SELECT slug, host, player_id, updated_at FROM stream_map ${where} ORDER BY updated_at DESC LIMIT ? OFFSET ?`
+  )
+    .bind(...binds, size, (page - 1) * size)
+    .all();
+  return json({ items: rows.results || [], total: total?.n ?? 0, page, size });
+}
+
+export async function streamMapDelete(ctx: RouteContext): Promise<Response> {
+  const guard = ensureAdmin(ctx);
+  if (guard) return guard;
+  const slug = ctx.params.slug;
+  if (!slug) return error("slug wajib", 400);
+  await deleteStreamMap(ctx, slug);
+  await audit(ctx, "stream_map.delete", slug);
+  return json({ ok: true });
+}
+
+export async function streamMapBuildStream(ctx: RouteContext): Promise<Response> {
+  const key = ctx.url.searchParams.get("key");
+  const keyOk = Boolean(key && ctx.env.SESSION_SECRET && key === ctx.env.SESSION_SECRET);
+  if (!keyOk) {
+    const guard = ensureAdmin(ctx);
+    if (guard) return guard;
+  }
+  const limit = Math.min(30, Math.max(1, Number(ctx.url.searchParams.get("limit") || "10") || 10));
+  const page = Math.max(1, Number(ctx.url.searchParams.get("page") || "1") || 1);
+  const base = ctx.env.LK21_BASE || DEFAULT_LK21_BASE;
+  const slugs = (await vaultCatalog(ctx, page, limit).catch(() => []).then((r) => r.map((i) => i.slug)))
+    .filter(Boolean);
+
+  const encoder = new TextEncoder();
+  const stream = new ReadableStream({
+    async start(controller) {
+      const send = (obj: unknown) => controller.enqueue(encoder.encode(JSON.stringify(obj) + "\n"));
+      let built = 0;
+      let skipped = 0;
+      let failed = 0;
+      for (const slug of slugs) {
+        const existing = await getStreamMap(ctx, slug);
+        if (existing) {
+          skipped++;
+          send({ slug, status: "skipped" });
+          continue;
+        }
+        try {
+          const { html, url } = await fetchDetailHtml(slug, base);
+          const refs = parseAllServers(html);
+          const found = await resolveFirstServer(html, url);
+          if (found) {
+            await saveStreamMap(ctx, slug, found.ref.origin, found.ref.host, found.ref.id);
+            await saveServers(ctx, slug, refs);
+            built++;
+            send({ slug, status: "built" });
+          } else {
+            failed++;
+            send({ slug, status: "failed" });
+          }
+        } catch (e) {
+          failed++;
+          send({ slug, status: "failed", error: (e as Error).message });
+        }
+      }
+      send({ done: true, total: slugs.length, built, skipped, failed });
+      controller.close();
+    },
+  });
+  return new Response(stream, {
+    headers: { "Content-Type": "application/x-ndjson", "Cache-Control": "no-store" },
+  });
 }
 
 export async function streamHealth(ctx: RouteContext): Promise<Response> {
