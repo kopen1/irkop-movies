@@ -8,8 +8,16 @@ interface Probe {
   detail: string;
 }
 
+interface DebugData {
+  ok: number;
+  total: number;
+  recommendedBase: string | null;
+  hint: string;
+  probes: Probe[];
+}
+
 export function Debug() {
-  const [data, setData] = useState<{ ok: number; total: number; probes: Probe[] } | null>(null);
+  const [data, setData] = useState<DebugData | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -33,9 +41,14 @@ export function Debug() {
         <p className="text-center text-muted text-sm mt-8">Gagal menghubungi endpoint debug.</p>
       ) : (
         <>
-          <div className="mb-4 text-sm">
+          <div className="mb-3 text-sm">
             Skor: <b>{data.ok}</b> / {data.total} upstream OK
           </div>
+          {data.hint && (
+            <div className={`mb-4 rounded-xl border p-3 text-xs ${data.recommendedBase ? "border-green-500/40 bg-green-500/10" : "border-accent/40 bg-accent/10"}`}>
+              {data.hint}
+            </div>
+          )}
           <div className="space-y-2">
             {data.probes.map((p) => (
               <div key={p.name} className="bg-surface border border-line rounded-xl p-3">
