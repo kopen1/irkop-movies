@@ -198,13 +198,14 @@ export async function streamMapBuild(ctx: RouteContext): Promise<Response> {
     const guard = ensureAdmin(ctx);
     if (guard) return guard;
   }
-  const limit = Math.min(100, Math.max(1, Number(ctx.url.searchParams.get("limit") || "30") || 30));
+  const limit = Math.min(30, Math.max(1, Number(ctx.url.searchParams.get("limit") || "10") || 10));
+  const page = Math.max(1, Number(ctx.url.searchParams.get("page") || "1") || 1);
   const single = ctx.url.searchParams.get("slug");
   const base = ctx.env.LK21_BASE || DEFAULT_LK21_BASE;
 
   const slugs: string[] = single
     ? [single]
-    : (await vaultCatalog(ctx, 1, limit).catch(() => [])).map((i) => i.slug).filter(Boolean);
+    : (await vaultCatalog(ctx, page, limit).catch(() => [])).map((i) => i.slug).filter(Boolean);
 
   let built = 0;
   let skipped = 0;
