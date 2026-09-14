@@ -107,19 +107,11 @@ export function Layout() {
             {user?.picture ? (
               <img src={user.picture} alt="" className="w-full h-full object-cover" />
             ) : (
-              (user?.name || user?.email || "Tamu")[0]?.toUpperCase()
+              (user?.name || "Tamu")[0]?.toUpperCase()
             )}
           </div>
           <div className="font-bold">{user?.name || "Tamu"}</div>
-          <div className="text-xs text-muted">{user?.email || "Masuk untuk simpan watchlist"}</div>
-          {!user && (
-            <a
-              href="/api/auth/google?return_to=/"
-              className="mt-3 block text-center bg-accent hover:bg-accent2 rounded-lg py-2.5 text-sm font-bold"
-            >
-              Masuk dengan Google
-            </a>
-          )}
+          <div className="text-xs text-muted">{user?.email || "Situs publik — tanpa login"}</div>
         </div>
         <div className="flex-1 overflow-y-auto p-2.5 space-y-1">
           {[
@@ -140,29 +132,24 @@ export function Layout() {
             </Link>
           ))}
           <div className="h-px bg-line mx-3 my-2" />
-          {user?.role === "admin" && (
-            <Link
-              to="/admin"
-              onClick={() => setDrawer(false)}
-              className="flex items-center gap-3 px-3.5 py-3 rounded-xl text-sm hover:bg-white/10 text-accent2"
-            >
-              <span className="w-5 text-center">🛠</span>Panel Admin
-            </Link>
-          )}
-          <button
-            onClick={() => {
-              setDrawer(false);
-              if (user) {
-                logout().then(() => toast("Keluar berhasil"));
-              } else {
-                window.location.href = "/api/auth/google?return_to=/";
-              }
-            }}
-            className="w-full flex items-center gap-3 px-3.5 py-3 rounded-xl text-sm hover:bg-white/10"
+          <Link
+            to="/admin"
+            onClick={() => setDrawer(false)}
+            className="flex items-center gap-3 px-3.5 py-3 rounded-xl text-sm hover:bg-white/10 text-accent2"
           >
-            <span className="w-5 text-center">⚙</span>
-            {user ? "Keluar" : "Masuk"}
-          </button>
+            <span className="w-5 text-center">🛠</span>Panel Admin
+          </Link>
+          {user && (
+            <button
+              onClick={() => {
+                setDrawer(false);
+                logout().then(() => toast("Keluar berhasil"));
+              }}
+              className="w-full flex items-center gap-3 px-3.5 py-3 rounded-xl text-sm hover:bg-white/10"
+            >
+              <span className="w-5 text-center">⏻</span>Keluar
+            </button>
+          )}
         </div>
         <div className="px-5 py-4 text-[11px] text-muted border-t border-line">NontonGo v1.0 · Data LK21</div>
       </aside>

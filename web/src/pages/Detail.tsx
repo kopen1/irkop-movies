@@ -1,8 +1,8 @@
-import { Suspense, lazy, useEffect, useState } from "react";
+import { Suspense, lazy, useMemo, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { api } from "../lib/api";
 import { useAsync } from "../lib/useAsync";
-import { useAuth } from "../stores/auth";
+import { useLibrary } from "../stores/library";
 import { useToast } from "../stores/toast";
 import { PosterCard } from "../components/PosterCard";
 import { Spinner } from "../components/Spinner";
@@ -14,50 +14,39 @@ export function Detail() {
   const { slug = "" } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
-  const { user } = useAuth();
   const toast = useToast((s) => s.show);
   const [playing, setPlaying] = useState(false);
-  const [inWatchlist, setInWatchlist] = useState(false);
+
+  const watchlist = useLibrary((s) => s.watchlist);
+  const addWatch = useLibrary((s) => s.addWatch);
+  const removeWatch = useLibrary((s) => s.removeWatch);
 
   const stateItem = (location.state as { item?: CatalogItem } | null)?.item;
   const itemId = stateItem?.id ? Number(stateItem.id) : null;
 
   const { data, loading, error } = useAsync(() => api.detail(slug, itemId), [slug, itemId]);
-  const relatedQuery = useAsync(() => (data?.postId ? api.related({ ids: [data.postId], type: data.type === "series" ? "series" : "movie" }) : Promise.resolve({ items: [], basedOn: 0 })), [
-    data?.postId,
-  ]);
+  const relatedQuery = useAsync(
+    () =>
+      data?.postId
+        ? api.related({ ids: [data.postId], type: data.type === "series" ? "series" : "movie" })
+        : Promise.resolve({ items: [], basedOn: 0 }),
+    [data?.postId]
+  );
 
-  useEffect(() => {
-    if (!user) return;
-    api
-      .watchlist()
-      .then(({ items }) => setInWatchlist(items.some((i) => i.slug === slug)))
-      .catch(() => {});
-  }, [user, slug]);
+  const inWatchlist = useMemo(() => watchlist.some((i) => i.slug === slug), [watchlist, slug]);
 
-  async function toggleWatchlist() {
-    if (!user) {
-      toast("Masuk dulu untuk menyimpan");
-      return;
-    }
-    try {
-      if (inWatchlist) {
-        await api.watchlistRemove(slug);
-        setInWatchlist(false);
-        toast("Dihapus dari watchlist");
-      } else {
-        await api.watchlistAdd({
-          slug,
-          postId: data?.postId ?? null,
-          postType: data?.type ?? "movie",
-          title: data?.title ?? slug,
-          poster: data?.poster ?? null,
-        });
-        setInWatchlist(true);
-        toast("Ditambahkan ke watchlist");
-      }
-    } catch (e) {
-      toast((e as Error).message);
+  function toggleWatchlist() {
+    if (inWatchlist) {
+      removeWatch(slug);
+      toast("Dihapus dari watchlist");
+    } else {
+      addWatch({
+        slug,
+        title: data?.title || stateItem?.title || slug,
+        poster: data?.poster || stateItem?.poster || null,
+        type: data?.type || stateItem?.type || null,
+      });
+      toast("Ditambahkan ke watchlist");
     }
   }
 

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import Hls from "hls.js";
 import { api } from "../../lib/api";
+import { useLibrary } from "../../stores/library";
 
 interface PlayerMeta {
   slug: string;
@@ -76,17 +77,15 @@ export function HlsPlayer({ meta, onClose }: { meta: PlayerMeta; onClose: () => 
       const now = Math.floor(video.currentTime || 0);
       if (now - last >= 15) {
         last = now;
-        api
-          .historyUpsert({
-            slug: meta.slug,
-            postId: meta.postId,
-            postType: meta.postType,
-            title: meta.title,
-            poster: meta.poster,
-            positionSec: now,
-            durationSec: Math.floor(video.duration || 0),
-          })
-          .catch(() => {});
+        useLibrary.getState().upsertHistory({
+          slug: meta.slug,
+          title: meta.title,
+          poster: meta.poster,
+          type: meta.postType,
+          positionSec: now,
+          durationSec: Math.floor(video.duration || 0),
+          updatedAt: Date.now(),
+        });
       }
     };
     video.addEventListener("timeupdate", onTime);

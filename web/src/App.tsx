@@ -1,13 +1,12 @@
 import { useEffect } from "react";
 import { Route, Routes } from "react-router-dom";
 import { Layout } from "./components/Layout";
-import { RequireAdmin, RequireAuth } from "./components/Protected";
+import { RequireAdmin } from "./components/Protected";
 import { useAuth } from "./stores/auth";
 import { Home } from "./pages/Home";
 import { Detail } from "./pages/Detail";
 import { Search } from "./pages/Search";
 import { Discover } from "./pages/Discover";
-import { Login } from "./pages/Login";
 import { Profile } from "./pages/Profile";
 import { Watchlist } from "./pages/Watchlist";
 import { History } from "./pages/History";
@@ -33,31 +32,9 @@ export default function App() {
         <Route path="detail/:slug" element={<Detail />} />
         <Route path="search" element={<Search />} />
         <Route path="discover" element={<Discover />} />
-        <Route path="login" element={<Login />} />
-        <Route
-          path="watchlist"
-          element={
-            <RequireAuth>
-              <Watchlist />
-            </RequireAuth>
-          }
-        />
-        <Route
-          path="history"
-          element={
-            <RequireAuth>
-              <History />
-            </RequireAuth>
-          }
-        />
-        <Route
-          path="profile"
-          element={
-            <RequireAuth>
-              <Profile />
-            </RequireAuth>
-          }
-        />
+        <Route path="watchlist" element={<Watchlist />} />
+        <Route path="history" element={<History />} />
+        <Route path="profile" element={<Profile />} />
         <Route
           path="admin"
           element={
