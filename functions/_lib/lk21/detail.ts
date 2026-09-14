@@ -1,4 +1,4 @@
-import { decodeEntities, DEFAULT_LK21_BASE, upstreamHeaders, VAULT_BASE } from "./common";
+import { decodeEntities, DEFAULT_LK21_BASE, ufetch, upstreamHeaders, VAULT_BASE } from "./common";
 
 export interface Lk21Detail {
   slug: string;
@@ -33,7 +33,7 @@ export async function fetchDetailHtml(
   base = DEFAULT_LK21_BASE
 ): Promise<{ html: string; url: string }> {
   const url = `${base}/${slug}`;
-  const res = await fetch(url, { headers: upstreamHeaders(`${base}/`, { Accept: "text/html,application/xhtml+xml" }) });
+  const res = await ufetch(url, { headers: upstreamHeaders(`${base}/`, { Accept: "text/html,application/xhtml+xml" }) });
   if (!res.ok) throw new Error(`detail upstream ${res.status}`);
   return { html: await res.text(), url };
 }
@@ -87,7 +87,7 @@ export interface PostDetailItem {
 export async function lk21PostDetail(postIds: number[]): Promise<PostDetailItem[]> {
   if (!postIds.length) return [];
   const url = `${VAULT_BASE}/post-detail.php?post_ids=${postIds.join(",")}`;
-  const res = await fetch(url, { headers: upstreamHeaders(`${VAULT_BASE}/`) });
+  const res = await ufetch(url, { headers: upstreamHeaders(`${VAULT_BASE}/`) });
   if (!res.ok) throw new Error(`post-detail upstream ${res.status}`);
   const data = (await res.json()) as { posts?: any[] };
   return (data.posts || []).map((p: any) => ({

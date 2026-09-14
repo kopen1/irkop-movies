@@ -8,6 +8,27 @@ export const THUMB_BASE = "https://poster.assetsy.de/wp-content/uploads/";
 
 export const DEFAULT_LK21_BASE = "https://tv12.lk21official.cc";
 
+// ---- Relay opsional ---------------------------------------------------------
+// Jika upstream memblokir request dari Cloudflare Worker (403), set env RELAY_URL
+// ke sebuah relay (di luar Cloudflare). Nilai bisa berupa:
+//   - prefix  : "https://relay.example.com/?url="   -> target di-append (URL-encoded)
+//   - template: "https://relay.example.com/{url}"   -> {url} diganti target (URL-encoded)
+let RELAY = "";
+
+export function setRelay(value?: string): void {
+  RELAY = value && value.trim() ? value.trim() : "";
+}
+
+export function viaRelay(url: string): string {
+  if (!RELAY) return url;
+  const encoded = encodeURIComponent(url);
+  return RELAY.includes("{url}") ? RELAY.replace("{url}", encoded) : RELAY + encoded;
+}
+
+export function ufetch(url: string, init?: RequestInit): Promise<Response> {
+  return fetch(viaRelay(url), init);
+}
+
 export function upstreamHeaders(referer: string, extra: Record<string, string> = {}): Record<string, string> {
   return {
     "User-Agent": LK21_USER_AGENT,

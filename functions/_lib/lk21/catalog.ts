@@ -1,9 +1,9 @@
-import { decodeEntities, DEFAULT_LK21_BASE, upstreamHeaders } from "./common";
+import { decodeEntities, DEFAULT_LK21_BASE, ufetch, upstreamHeaders } from "./common";
 import type { CatalogItem } from "./search";
 
 export async function lk21Listing(path: string, base = DEFAULT_LK21_BASE): Promise<CatalogItem[]> {
   const url = base + path;
-  const res = await fetch(url, { headers: upstreamHeaders(`${base}/`, { Accept: "text/html,application/xhtml+xml" }) });
+  const res = await ufetch(url, { headers: upstreamHeaders(`${base}/`, { Accept: "text/html,application/xhtml+xml" }) });
   if (!res.ok) throw new Error(`listing upstream ${res.status}`);
   const html = await res.text();
   return parseListing(html);

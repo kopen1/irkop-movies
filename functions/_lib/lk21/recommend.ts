@@ -1,4 +1,4 @@
-import { absoluteThumb, decodeEntities, upstreamHeaders, YML_URL } from "./common";
+import { absoluteThumb, decodeEntities, ufetch, upstreamHeaders, YML_URL } from "./common";
 
 export interface RelatedItem {
   postId: number;
@@ -19,7 +19,7 @@ function b64DecodeUtf8(input: string): string {
 
 export async function lk21Related(history: number[], type: "movie" | "series" = "movie"): Promise<RelatedItem[]> {
   if (!history.length) return [];
-  const res = await fetch(YML_URL, {
+  const res = await ufetch(YML_URL, {
     method: "POST",
     headers: upstreamHeaders("https://youlike.dadadidi.de/", { "Content-Type": "application/json" }),
     body: JSON.stringify({ history, type }),

@@ -1,6 +1,6 @@
 import type { RouteContext } from "../env";
 import { error, json } from "../http";
-import { LK21_USER_AGENT } from "../lk21/common";
+import { LK21_USER_AGENT, ufetch } from "../lk21/common";
 import { fetchDetailHtml } from "../lk21/detail";
 import { resolveStream } from "../lk21/stream";
 
@@ -27,7 +27,7 @@ export async function hls(ctx: RouteContext): Promise<Response> {
     return error("u bukan URL valid", 400);
   }
   const range = ctx.request.headers.get("Range");
-  const up = await fetch(tu.toString(), {
+  const up = await ufetch(tu.toString(), {
     headers: {
       "User-Agent": LK21_USER_AGENT,
       Accept: "*/*",

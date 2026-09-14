@@ -109,6 +109,31 @@ Login dulu dengan Google, lalu:
 npx wrangler d1 execute nontongo --command "UPDATE users SET role='admin' WHERE email='EMAIL_KAMU';"
 ```
 
+## Jika muncul "upstream 403"
+
+`tv12.lk21official.cc` memblokir request dari Cloudflare Worker (bot protection).
+Gejalanya: Home/Discover gagal, atau tombol Tonton gagal memuat stream.
+
+Cek dulu upstream mana yang lolos: buka `GET /api/debug/lk21`.
+
+Penanganan:
+
+1. **Fallback otomatis.** Feed katalog sudah otomatis jatuh ke search API
+   (`gudangvape.com/search.php?s=*`) bila scrape listing diblokir. Jika search
+   juga diblokir, Home akan error.
+2. **Relay.** Deploy relay kecil di luar Cloudflare (lihat `relay/deno.ts`),
+   lalu set env/secret:
+   ```
+   RELAY_URL = https://<relay>.deno.dev/?url=
+   ```
+   Semua request upstream (listing, search, detail, stream, segmen HLS) akan
+   lewat relay. Alternatif relay: Vercel/Render/Fly/VPS.
+3. **Ganti mirror.** Set `LK21_BASE` ke domain mirror lain (mis.
+   `https://tv.lk21official.dev`) dan cek `/api/debug/lk21`.
+
+Catatan: saat fallback search dipakai, filter genre tidak bekerja (API search
+tidak mendukung genre), jadi halaman Jelajah menampilkan katalog umum.
+
 ## Uji konektivitas upstream (penting)
 
 Setelah deploy, buka `/admin/debug` (login admin) atau `GET /api/debug/lk21`.

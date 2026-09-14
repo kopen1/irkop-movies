@@ -1,6 +1,7 @@
 import type { AppContext, RouteContext } from "./env";
 import { error, json } from "./http";
 import { getSessionUser } from "./session";
+import { setRelay } from "./lk21/common";
 import * as auth from "./routes/auth";
 import * as catalog from "./routes/catalog";
 import * as stream from "./routes/stream";
@@ -91,6 +92,8 @@ export async function handleApi(context: AppContext): Promise<Response> {
   if (context.request.method === "OPTIONS") {
     return new Response(null, { status: 204 });
   }
+
+  setRelay(context.env.RELAY_URL);
 
   const url = new URL(context.request.url);
   const path = url.pathname.replace(/^\/api\/?/, "").replace(/\/+$/, "");

@@ -5,6 +5,7 @@ export interface Env {
   GOOGLE_CLIENT_SECRET: string;
   SESSION_SECRET: string;
   LK21_BASE: string;
+  RELAY_URL?: string;
 }
 
 export interface AppContext {

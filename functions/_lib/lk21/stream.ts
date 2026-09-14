@@ -1,4 +1,4 @@
-import { LK21_USER_AGENT } from "./common";
+import { LK21_USER_AGENT, ufetch } from "./common";
 import { extractServers } from "./detail";
 
 async function resolveServer(serverUrl: string, referer: string): Promise<string | null> {
@@ -8,7 +8,7 @@ async function resolveServer(serverUrl: string, referer: string): Promise<string
   const host = parts[parts.length - 2];
   const id = parts[parts.length - 1];
 
-  const apiRes = await fetch(u.origin + "/api.php", {
+  const apiRes = await ufetch(u.origin + "/api.php", {
     method: "POST",
     headers: {
       "User-Agent": LK21_USER_AGENT,
@@ -26,7 +26,7 @@ async function resolveServer(serverUrl: string, referer: string): Promise<string
   const embed = new URL(apiData.embedUrl);
   const slug = embed.pathname.split("/").filter(Boolean).pop();
   if (!slug) return null;
-  const verifyRes = await fetch(`${embed.origin}/verify/${encodeURIComponent(slug)}`, {
+  const verifyRes = await ufetch(`${embed.origin}/verify/${encodeURIComponent(slug)}`, {
     headers: {
       "User-Agent": LK21_USER_AGENT,
       Accept: "application/json, text/plain, */*",

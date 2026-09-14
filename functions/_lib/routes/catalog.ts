@@ -4,31 +4,53 @@ import { lk21Listing } from "../lk21/catalog";
 import { lk21DetailPage, lk21PostDetail } from "../lk21/detail";
 import { lk21Related } from "../lk21/recommend";
 import { lk21Search, lk21SearchSuggest } from "../lk21/search";
+import type { CatalogItem } from "../lk21/search";
 
 function base(ctx: RouteContext): string {
   return ctx.env.LK21_BASE || "https://tv12.lk21official.cc";
 }
 
+// Ambil feed. Jika listing HTML diblokir (mis. 403 dari Worker), fallback ke
+// search API `s=*` yang mengembalikan katalog JSON.
+async function feed(ctx: RouteContext, path: string, page: number, sortByRating = false): Promise<CatalogItem[]> {
+  try {
+    return await lk21Listing(path, base(ctx));
+  } catch (listingError) {
+    try {
+      const pages = sortByRating ? [1, 2, 3] : [page];
+      const all: CatalogItem[] = [];
+      for (const p of pages) {
+        const res = await lk21Search("*", p);
+        all.push(...res.items);
+      }
+      if (sortByRating) all.sort((a, b) => (b.rating || 0) - (a.rating || 0));
+      return all.slice(0, 24);
+    } catch {
+      throw listingError;
+    }
+  }
+}
+
 export async function trending(ctx: RouteContext): Promise<Response> {
-  const items = await lk21Listing("/populer/page/1", base(ctx));
+  const items = await feed(ctx, "/populer/page/1", 1);
   return json({ items });
 }
 
 export async function top(ctx: RouteContext): Promise<Response> {
-  const items = await lk21Listing("/rating/page/1", base(ctx));
+  const items = await feed(ctx, "/rating/page/1", 2, true);
   return json({ items });
 }
 
 export async function latest(ctx: RouteContext): Promise<Response> {
   const page = Number(ctx.url.searchParams.get("page") || "1") || 1;
-  const items = await lk21Listing(`/latest/page/${page}`, base(ctx));
+  const items = await feed(ctx, `/latest/page/${page}`, page);
   return json({ items, page });
 }
 
 export async function genre(ctx: RouteContext): Promise<Response> {
   const g = ctx.url.searchParams.get("g") || "action";
   const page = Number(ctx.url.searchParams.get("page") || "1") || 1;
-  const items = await lk21Listing(`/genre/${encodeURIComponent(g)}/page/${page}`, base(ctx));
+  const items = await feed(ctx, `/genre/${encodeURIComponent(g)}/page/${page}`, page);
   return json({ items, genre: g, page });
 }
 
