@@ -10,9 +10,9 @@ database_id = "44851171-2802-4fd1-8a5a-b4903226a2b4"
 
 [vars]
 # URL publik situs (dipakai untuk redirect_uri Google OAuth)
-APP_BASE_URL = "https://nontongo.pages.dev"
+APP_BASE_URL = "https://irkop-movies.pages.dev/"
 # Client ID dari Google Cloud Console (bukan rahasia)
-GOOGLE_CLIENT_ID = "GANTI_GOOGLE_CLIENT_ID"
+#GOOGLE_CLIENT_ID = "GANTI_GOOGLE_CLIENT_ID"
 # Basis situs sumber katalog
 LK21_BASE = "https://tv12.lk21official.cc"
 # Opsional: set jika upstream memblokir Worker (error "upstream 403").

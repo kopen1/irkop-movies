@@ -1,6 +1,6 @@
 import type { RouteContext } from "../env";
 import { json } from "../http";
-import { LK21_USER_AGENT, SEARCH_BASE, VAULT_BASE, YML_URL } from "../lk21/common";
+import { LK21_USER_AGENT, SEARCH_BASE, VAULT_BASE, YML_URL, ufetch } from "../lk21/common";
 import { extractServers } from "../lk21/detail";
 
 interface Probe {
@@ -27,14 +27,15 @@ async function probe(name: string, run: () => Promise<{ status: number; sample: 
 }
 
 async function fetchText(url: string, accept = "text/html"): Promise<{ status: number; text: string }> {
-  const r = await fetch(url, {
+  const r = await ufetch(url, {
     headers: { "User-Agent": LK21_USER_AGENT, Accept: accept, Referer: new URL(url).origin + "/" },
   });
   return { status: r.status, text: await r.text() };
 }
 
-export async function debugUpstreams(_ctx: RouteContext): Promise<Response> {
+export async function debugUpstreams(ctx: RouteContext): Promise<Response> {
   const probes: Probe[] = [];
+  const relayEnabled = Boolean(ctx.env.RELAY_URL && ctx.env.RELAY_URL.trim());
 
   // 1) Uji tiap kandidat mirror untuk listing
   for (const base of CANDIDATE_BASES) {
@@ -59,7 +60,7 @@ export async function debugUpstreams(_ctx: RouteContext): Promise<Response> {
         const parts = u.pathname.split("/").filter(Boolean);
         const host = parts[parts.length - 2];
         const id = parts[parts.length - 1];
-        const api = await fetch(u.origin + "/api.php", {
+        const api = await ufetch(u.origin + "/api.php", {
           method: "POST",
           headers: {
             "User-Agent": LK21_USER_AGENT,
@@ -79,7 +80,7 @@ export async function debugUpstreams(_ctx: RouteContext): Promise<Response> {
   // 3) Search API
   probes.push(
     await probe(`search ${SEARCH_BASE}`, async () => {
-      const r = await fetch(`${SEARCH_BASE}/search.php?s=avenger&page=1`, {
+      const r = await ufetch(`${SEARCH_BASE}/search.php?s=avenger&page=1`, {
         headers: { "User-Agent": LK21_USER_AGENT, Accept: "application/json", Referer: `${SEARCH_BASE}/` },
       });
       return { status: r.status, sample: (await r.text()).slice(0, 90) };
@@ -89,7 +90,7 @@ export async function debugUpstreams(_ctx: RouteContext): Promise<Response> {
   // 4) Vault & related (diketahui lolos)
   probes.push(
     await probe(`vault ${VAULT_BASE}`, async () => {
-      const r = await fetch(`${VAULT_BASE}/post-detail.php?post_ids=34550`, {
+      const r = await ufetch(`${VAULT_BASE}/post-detail.php?post_ids=34550`, {
         headers: { "User-Agent": LK21_USER_AGENT, Accept: "application/json", Referer: `${VAULT_BASE}/` },
       });
       return { status: r.status, sample: (await r.text()).slice(0, 90) };
@@ -98,7 +99,7 @@ export async function debugUpstreams(_ctx: RouteContext): Promise<Response> {
 
   probes.push(
     await probe(`related ${YML_URL}`, async () => {
-      const r = await fetch(YML_URL, {
+      const r = await ufetch(YML_URL, {
         method: "POST",
         headers: {
           "User-Agent": LK21_USER_AGENT,
@@ -120,10 +121,15 @@ export async function debugUpstreams(_ctx: RouteContext): Promise<Response> {
   return json({
     ok: okCount,
     total: probes.length,
+    relayEnabled,
     recommendedBase: workingBase || null,
-    hint: workingBase
-      ? `Set LK21_BASE = ${workingBase} di environment Cloudflare, lalu redeploy.`
-      : "Tidak ada mirror yang lolos. Perlu RELAY_URL (lihat relay/deno.ts).",
+    hint: relayEnabled
+      ? workingBase
+        ? "Relay aktif dan upstream lolos. Semua fitur seharusnya jalan."
+        : "Relay aktif tapi upstream tetap 403. Coba relay lain (Vercel/Render/VPS) atau IP residensial."
+      : workingBase
+        ? `Set LK21_BASE = ${workingBase} (katalog jalan, stream terbatas).`
+        : "Tidak ada mirror yang lolos. Deploy relay (relay/deno.ts) lalu set RELAY_URL, kemudian jalankan debug ini lagi.",
     probes,
   });
 }

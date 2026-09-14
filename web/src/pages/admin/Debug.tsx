@@ -11,6 +11,7 @@ interface Probe {
 interface DebugData {
   ok: number;
   total: number;
+  relayEnabled: boolean;
   recommendedBase: string | null;
   hint: string;
   probes: Probe[];
@@ -41,8 +42,13 @@ export function Debug() {
         <p className="text-center text-muted text-sm mt-8">Gagal menghubungi endpoint debug.</p>
       ) : (
         <>
-          <div className="mb-3 text-sm">
-            Skor: <b>{data.ok}</b> / {data.total} upstream OK
+          <div className="mb-3 text-sm flex items-center gap-3">
+            <span>
+              Skor: <b>{data.ok}</b> / {data.total} upstream OK
+            </span>
+            <span className={`text-[11px] px-2 py-0.5 rounded-full ${data.relayEnabled ? "bg-green-500/20 text-green-300" : "bg-white/10 text-muted"}`}>
+              relay {data.relayEnabled ? "aktif" : "mati"}
+            </span>
           </div>
           {data.hint && (
             <div className={`mb-4 rounded-xl border p-3 text-xs ${data.recommendedBase ? "border-green-500/40 bg-green-500/10" : "border-accent/40 bg-accent/10"}`}>
