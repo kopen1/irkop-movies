@@ -191,8 +191,13 @@ export async function auditList(ctx: RouteContext): Promise<Response> {
 }
 
 export async function streamMapBuild(ctx: RouteContext): Promise<Response> {
-  const guard = ensureAdmin(ctx);
-  if (guard) return guard;
+  // Boleh diakses admin, ATAU dengan ?key=<SESSION_SECRET> untuk build awal tanpa login.
+  const key = ctx.url.searchParams.get("key");
+  const keyOk = Boolean(key && ctx.env.SESSION_SECRET && key === ctx.env.SESSION_SECRET);
+  if (!keyOk) {
+    const guard = ensureAdmin(ctx);
+    if (guard) return guard;
+  }
   const limit = Math.min(100, Math.max(1, Number(ctx.url.searchParams.get("limit") || "30") || 30));
   const single = ctx.url.searchParams.get("slug");
   const base = ctx.env.LK21_BASE || DEFAULT_LK21_BASE;
