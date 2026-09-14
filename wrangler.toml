@@ -1,0 +1,21 @@
+name = "nontongo"
+compatibility_date = "2025-01-01"
+pages_build_output_dir = "web/dist"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "nontongo"
+database_id = "44851171-2802-4fd1-8a5a-b4903226a2b4"
+
+
+[vars]
+# URL publik situs (dipakai untuk redirect_uri Google OAuth)
+APP_BASE_URL = "https://nontongo.pages.dev"
+# Client ID dari Google Cloud Console (bukan rahasia)
+GOOGLE_CLIENT_ID = "GANTI_GOOGLE_CLIENT_ID"
+# Basis situs sumber katalog
+LK21_BASE = "https://tv12.lk21official.cc"
+
+# Secret (JANGAN ditulis di sini). Set lewat:
+#   wrangler pages secret put GOOGLE_CLIENT_SECRET
+#   wrangler pages secret put SESSION_SECRET

@@ -1,0 +1,49 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+}
+
+body {
+  @apply bg-[#1b2333] text-[#f2f6fd] font-sans;
+  background-image:
+    radial-gradient(900px 500px at 80% 0%, rgba(90, 120, 220, 0.18), transparent 60%),
+    radial-gradient(800px 500px at 0% 30%, rgba(229, 9, 20, 0.12), transparent 55%);
+  min-height: 100dvh;
+}
+
+#root {
+  display: flex;
+  justify-content: center;
+  min-height: 100dvh;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  scrollbar-width: none;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.spinner {
+  width: 42px;
+  height: 42px;
+  border: 4px solid rgba(255, 255, 255, 0.25);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}

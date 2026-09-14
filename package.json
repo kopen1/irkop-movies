@@ -1,0 +1,26 @@
+{
+  "name": "nontongo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "NontonGo - web app streaming dengan akun Google, katalog LK21, dan panel admin",
+  "scripts": {
+    "dev": "cd web && node ../node_modules/vite/bin/vite.js",
+    "build": "cd web && node ../node_modules/vite/bin/vite.js build",
+    "preview": "cd web && node ../node_modules/vite/bin/vite.js preview",
+    "typecheck": "node node_modules/typescript/bin/tsc -p web/tsconfig.json",
+    "typecheck:api": "node node_modules/typescript/bin/tsc -p functions/tsconfig.json",
+    "db:init": "wrangler d1 execute nontongo --file=db/schema.sql",
+    "db:init:local": "wrangler d1 execute nontongo --local --file=db/schema.sql",
+    "deploy": "wrangler pages deploy web/dist"
+  },
+  "workspaces": [
+    "web"
+  ],
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20241106.0",
+    "typescript": "^5.6.3"
+  },
+  "optionalDependencies": {
+    "wrangler": "^3.90.0"
+  }
+}

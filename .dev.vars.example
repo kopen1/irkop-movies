@@ -1,0 +1,7 @@
+# Salin file ini menjadi ".dev.vars" untuk dev lokal (wrangler pages dev).
+# Nilai di bawah hanya placeholder — isi dengan milikmu sendiri.
+APP_BASE_URL=http://localhost:8788
+GOOGLE_CLIENT_ID=GANTI_GOOGLE_CLIENT_ID
+GOOGLE_CLIENT_SECRET=GANTI_GOOGLE_CLIENT_SECRET
+SESSION_SECRET=irkopkopen
+LK21_BASE=https://tv12.lk21official.cc
