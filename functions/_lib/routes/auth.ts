@@ -1,7 +1,34 @@
-import type { RouteContext } from "../env";
+import type { RouteContext, UserRow } from "../env";
 import { error, getCookie, json, redirect, serializeCookie } from "../http";
 import { randomToken } from "../crypto";
 import { clearSessionCookie, createSession, destroySession, getSessionUser, upsertUser } from "../session";
+
+export async function adminLogin(ctx: RouteContext): Promise<Response> {
+  const body = (await ctx.request.json().catch(() => ({}))) as { email?: string };
+  const email = String(body.email || "").trim().toLowerCase();
+  if (!email) return error("Email wajib diisi", 400);
+
+  const admin = await ctx.env.DB.prepare("SELECT email FROM admins WHERE lower(email) = lower(?)")
+    .bind(email)
+    .first<{ email: string }>();
+  if (!admin) return error("Email ini bukan admin", 403);
+
+  await ctx.env.DB.prepare(
+    `INSERT INTO users (email, name, role) VALUES (?, ?, 'admin')
+     ON CONFLICT(email) DO UPDATE SET role = 'admin'`
+  )
+    .bind(email, email)
+    .run();
+  const user = await ctx.env.DB.prepare("SELECT * FROM users WHERE email = ?").bind(email).first<UserRow>();
+  if (!user) return error("Gagal membuat user admin", 500);
+
+  const cookie = await createSession(ctx, user.id);
+  const res = json({
+    user: { id: user.id, email: user.email, name: user.name, picture: user.picture, role: user.role },
+  });
+  res.headers.append("Set-Cookie", cookie);
+  return res;
+}
 
 const STATE_COOKIE = "ng_oauth_state";
 const GOOGLE_AUTH = "https://accounts.google.com/o/oauth2/v2/auth";

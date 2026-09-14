@@ -31,6 +31,8 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
 export const api = {
   me: () => request<{ user: User | null }>("/auth/me"),
+  adminLogin: (email: string) =>
+    request<{ user: User }>("/auth/admin", { method: "POST", body: JSON.stringify({ email }) }),
   logout: () => request<{ ok: boolean }>("/auth/logout", { method: "POST" }),
 
   trending: () => request<{ items: CatalogItem[] }>("/catalog/trending"),

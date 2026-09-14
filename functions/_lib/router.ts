@@ -21,6 +21,7 @@ interface RouteDef {
 const ROUTES: RouteDef[] = [
   { method: "GET", path: "auth/google", handler: auth.googleStart },
   { method: "GET", path: "auth/google/callback", handler: auth.googleCallback },
+  { method: "POST", path: "auth/admin", handler: auth.adminLogin },
   { method: "GET", path: "auth/me", handler: auth.me },
   { method: "POST", path: "auth/logout", handler: auth.logout },
 

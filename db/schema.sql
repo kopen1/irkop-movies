@@ -13,6 +13,15 @@ CREATE TABLE IF NOT EXISTS users (
   last_login_at TEXT
 );
 
+-- Daftar admin (login email saja, tanpa password/Google).
+-- Isi email admin via query D1, mis:
+--   INSERT OR IGNORE INTO admins (email, note) VALUES ('emailmu@gmail.com', 'owner');
+CREATE TABLE IF NOT EXISTS admins (
+  email      TEXT PRIMARY KEY,
+  note       TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
 CREATE TABLE IF NOT EXISTS sessions (
   id         TEXT PRIMARY KEY,                     -- sha256(raw token)
   user_id    INTEGER NOT NULL,
