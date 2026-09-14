@@ -105,7 +105,67 @@ export async function debugUpstreams(ctx: RouteContext): Promise<Response> {
     );
   }
 
-  // 3) Search API
+  // 3) Rantai stream langsung (untuk cek apakah butuh relay atau tidak)
+  probes.push(
+    await probe("videonode api.php", async () => {
+      const r = await ufetch("https://videonode.de/api.php", {
+        method: "POST",
+        headers: {
+          "User-Agent": LK21_USER_AGENT,
+          Accept: "application/json",
+          "Content-Type": "application/x-www-form-urlencoded",
+          Referer: "https://tv12.lk21official.cc/tarung-unforgiven-2026",
+          Origin: "https://videonode.de",
+        },
+        body: "host=p2p&id=9wpHSUGBuvsFuAeTw7GFCw",
+      });
+      return { status: r.status, sample: (await r.text()).slice(0, 90) };
+    })
+  );
+
+  probes.push(
+    await probe("playcdn verify", async () => {
+      const r = await ufetch("https://playcdn.de/verify/YjE2NDZiYmRjZDQxMWE0YazKUaPRipU", {
+        headers: {
+          "User-Agent": LK21_USER_AGENT,
+          Accept: "application/json",
+          Referer: "https://playcdn.de/YjE2NDZiYmRjZDQxMWE0YazKUaPRipU",
+        },
+      });
+      return { status: r.status, sample: (await r.text()).slice(0, 90) };
+    })
+  );
+
+  probes.push(
+    await probe("stream m3u8", async () => {
+      const r = await ufetch("https://stream.playcdn.de/playlist/2a079e33140384bc5f31a9d3f1dd8c95/1/0.m3u8?x=1", {
+        headers: { "User-Agent": LK21_USER_AGENT, Accept: "*/*", Referer: "https://playcdn.de/" },
+      });
+      const t = await r.text();
+      return { status: r.status, sample: t.includes("#EXTM3U") ? "EXTM3U OK" : t.slice(0, 80) };
+    })
+  );
+
+  probes.push(
+    await probe("stream segmen", async () => {
+      const m = await ufetch("https://stream.playcdn.de/playlist/2a079e33140384bc5f31a9d3f1dd8c95/1/0.m3u8?x=1", {
+        headers: { "User-Agent": LK21_USER_AGENT, Accept: "*/*", Referer: "https://playcdn.de/" },
+      });
+      const txt = await m.text();
+      const seg = txt
+        .split("\n")
+        .map((l) => l.trim())
+        .find((l) => l && !l.startsWith("#"));
+      if (!seg) return { status: m.status, sample: "tidak ada segmen di m3u8" };
+      const r = await ufetch(seg, {
+        headers: { "User-Agent": LK21_USER_AGENT, Accept: "*/*", Referer: "https://playcdn.de/", Range: "bytes=0-499" },
+      });
+      const buf = await r.arrayBuffer();
+      return { status: r.status, sample: `bytes=${buf.byteLength}` };
+    })
+  );
+
+  // 4) Search API
   probes.push(
     await probe(`search ${SEARCH_BASE}`, async () => {
       const r = await ufetch(`${SEARCH_BASE}/search.php?s=avenger&page=1`, {
