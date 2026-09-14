@@ -11,6 +11,8 @@ import { Spinner } from "../components/Spinner";
 export function Home() {
   const { data, loading, error } = useAsync(() => Promise.all([api.trending(), api.top()]), []);
   const [heroIndex, setHeroIndex] = useState(0);
+  const [page, setPage] = useState(1);
+  const latestQuery = useAsync(() => api.latest(page), [page]);
   const history = useLibrary((s) => s.history);
   const trending = data?.[0].items ?? [];
   const top = data?.[1].items ?? [];
@@ -79,14 +81,43 @@ export function Home() {
       <Rail title="🔥 Trending Hari Ini" items={trending} action={<Link to="/discover">Lihat semua</Link>} />
       <Rail title="⭐ Rating Tertinggi" items={top} />
 
-      <section className="pb-8">
+      <section id="jelajah" className="pb-8">
         <div className="flex items-center px-4 pb-3">
           <h3 className="text-base font-bold">🎬 Jelajahi Film</h3>
+          <span className="ml-auto text-xs text-muted">Hal. {page}</span>
         </div>
-        <div className="grid grid-cols-2 gap-3 px-4">
-          {trending.slice(0, 8).map((item) => (
-            <PosterCard key={item.slug} item={item} />
-          ))}
+
+        {latestQuery.loading ? (
+          <Spinner />
+        ) : (
+          <div className="grid grid-cols-2 gap-3 px-4">
+            {(latestQuery.data?.items ?? []).map((item) => (
+              <PosterCard key={item.slug} item={item} />
+            ))}
+          </div>
+        )}
+
+        <div className="flex justify-center gap-3 mt-5">
+          <button
+            disabled={page <= 1}
+            onClick={() => {
+              setPage((p) => Math.max(1, p - 1));
+              document.getElementById("jelajah")?.scrollIntoView({ behavior: "smooth", block: "start" });
+            }}
+            className="px-4 py-2 rounded-lg bg-surface border border-line text-sm disabled:opacity-40"
+          >
+            ← Prev
+          </button>
+          <span className="px-3 py-2 text-sm">Hal. {page}</span>
+          <button
+            onClick={() => {
+              setPage((p) => p + 1);
+              document.getElementById("jelajah")?.scrollIntoView({ behavior: "smooth", block: "start" });
+            }}
+            className="px-4 py-2 rounded-lg bg-surface border border-line text-sm"
+          >
+            Next →
+          </button>
         </div>
       </section>
     </div>
