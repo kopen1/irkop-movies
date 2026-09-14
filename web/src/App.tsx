@@ -8,7 +8,6 @@ import { Detail } from "./pages/Detail";
 import { Search } from "./pages/Search";
 import { Discover } from "./pages/Discover";
 import { Catalog } from "./pages/Catalog";
-import { Profile } from "./pages/Profile";
 import { Watchlist } from "./pages/Watchlist";
 import { History } from "./pages/History";
 import { NotFound } from "./pages/NotFound";
@@ -37,7 +36,6 @@ export default function App() {
         <Route path="series" element={<Catalog type="series" title="📺 Series" />} />
         <Route path="watchlist" element={<Watchlist />} />
         <Route path="history" element={<History />} />
-        <Route path="profile" element={<Profile />} />
         <Route
           path="admin"
           element={
