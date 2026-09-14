@@ -16,6 +16,7 @@ export function HlsPlayer({ meta, onClose }: { meta: PlayerMeta; onClose: () => 
   const onCloseRef = useRef(onClose);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [fallback, setFallback] = useState<string | null>(null);
 
   useEffect(() => {
     onCloseRef.current = onClose;
@@ -30,6 +31,7 @@ export function HlsPlayer({ meta, onClose }: { meta: PlayerMeta; onClose: () => 
       try {
         const res = await api.play(meta.slug);
         if (cancelled || !video) return;
+        if (res.fallbackUrl) setFallback(res.fallbackUrl);
 
         // Worker diblokir upstream -> buka mirror di tab baru (browser lolos challenge)
         if (!res.fileUrl) {
@@ -134,14 +136,16 @@ export function HlsPlayer({ meta, onClose }: { meta: PlayerMeta; onClose: () => 
             <div className="absolute inset-0 grid place-items-center p-6 text-center text-muted">
               <div>
                 <p>{error}</p>
-                <a
-                  className="mt-4 inline-block text-accent2 underline"
-                  href={`https://tv12.lk21official.cc/${meta.slug}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  Buka di LK21
-                </a>
+                {fallback && (
+                  <a
+                    className="mt-4 inline-block text-accent2 underline"
+                    href={fallback}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    Buka di mirror
+                  </a>
+                )}
               </div>
             </div>
           )}

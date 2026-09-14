@@ -1,12 +1,12 @@
 import type { RouteContext } from "../env";
 import { error, json } from "../http";
-import { LK21_USER_AGENT, ufetch } from "../lk21/common";
+import { DEFAULT_LK21_BASE, LK21_USER_AGENT, ufetch } from "../lk21/common";
 import { fetchDetailHtml } from "../lk21/detail";
 import { resolveByHostId, resolveFirstServer } from "../lk21/stream";
 import { getStreamMap, saveStreamMap } from "../lk21/streamMap";
 
 function base(ctx: RouteContext): string {
-  return ctx.env.LK21_BASE || "https://tv12.lk21official.cc";
+  return ctx.env.LK21_BASE || DEFAULT_LK21_BASE;
 }
 
 function proxyUrl(fileUrl: string): string {
@@ -27,7 +27,7 @@ export async function play(ctx: RouteContext): Promise<Response> {
   if (cached) {
     try {
       const file = await resolveByHostId(cached.origin, cached.host, cached.player_id, referer);
-      if (file) return json({ fileUrl: file, proxy: proxyUrl(file), cached: true });
+      if (file) return json({ fileUrl: file, proxy: proxyUrl(file), cached: true, fallbackUrl });
     } catch {
       /* cache kedaluwarsa -> coba refresh di bawah */
     }
@@ -40,7 +40,7 @@ export async function play(ctx: RouteContext): Promise<Response> {
     const found = await resolveFirstServer(html, url);
     if (found) {
       await saveStreamMap(ctx, slug, found.ref.origin, found.ref.host, found.ref.id);
-      return json({ fileUrl: found.fileUrl, proxy: proxyUrl(found.fileUrl), cached: false });
+      return json({ fileUrl: found.fileUrl, proxy: proxyUrl(found.fileUrl), cached: false, fallbackUrl });
     }
     return json({ fileUrl: null, fallbackUrl, reason: "stream-unavailable" });
   } catch (e) {

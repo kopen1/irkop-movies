@@ -1,6 +1,7 @@
 import type { RouteContext } from "../env";
 import { error, json } from "../http";
 import { lk21Listing } from "../lk21/catalog";
+import { DEFAULT_LK21_BASE } from "../lk21/common";
 import { lk21DetailPage, lk21PostDetail } from "../lk21/detail";
 import { lk21Related } from "../lk21/recommend";
 import { lk21Search, lk21SearchSuggest } from "../lk21/search";
@@ -8,7 +9,7 @@ import type { CatalogItem } from "../lk21/search";
 import { vaultCatalog, vaultDetail } from "../lk21/vault";
 
 function base(ctx: RouteContext): string {
-  return ctx.env.LK21_BASE || "https://tv12.lk21official.cc";
+  return ctx.env.LK21_BASE || DEFAULT_LK21_BASE;
 }
 
 interface FeedOpts {
