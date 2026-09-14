@@ -92,39 +92,60 @@ export function HlsPlayer({ meta, onClose }: { meta: PlayerMeta; onClose: () => 
     return () => video.removeEventListener("timeupdate", onTime);
   }, [meta]);
 
-  return (
-    <div className="fixed inset-0 z-[200] bg-black flex flex-col">
-      <div className="absolute top-0 left-0 right-0 z-10 flex items-center gap-2 px-3 pt-[calc(10px+env(safe-area-inset-top))] pb-2 bg-gradient-to-b from-black/80 to-transparent">
-        <button onClick={onClose} className="w-11 h-11 rounded-full grid place-items-center bg-black/50" aria-label="Tutup">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M15 18l-6-6 6-6" />
-          </svg>
-        </button>
-        <p className="text-sm font-semibold truncate">{meta.title}</p>
-      </div>
+  function toggleFullscreen() {
+    const video = videoRef.current;
+    if (!video) return;
+    if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+    else video.requestFullscreen?.().catch(() => {});
+  }
 
-      <div className="flex-1 grid place-items-center relative">
-        <video ref={videoRef} controls playsInline className="w-full h-full bg-black object-contain" />
-        {loading && !error && (
-          <div className="absolute inset-0 grid place-items-center">
-            <div className="spinner" />
-          </div>
-        )}
-        {error && (
-          <div className="absolute inset-0 grid place-items-center p-6 text-center text-muted">
-            <div>
-              <p>{error}</p>
-              <a
-                className="mt-4 inline-block text-accent2 underline"
-                href={`https://tv12.lk21official.cc/${meta.slug}`}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                Buka di LK21
-              </a>
+  return (
+    <div className="fixed inset-0 z-[200] bg-black/85 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4" onClick={onClose}>
+      <div
+        className="w-full max-w-3xl rounded-2xl overflow-hidden bg-black border border-line shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center gap-2 px-3 py-2 bg-surface">
+          <button onClick={onClose} className="w-9 h-9 rounded-full grid place-items-center hover:bg-white/10" aria-label="Tutup">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M15 18l-6-6 6-6" />
+            </svg>
+          </button>
+          <p className="text-sm font-semibold truncate">{meta.title}</p>
+          <button
+            onClick={toggleFullscreen}
+            className="ml-auto w-9 h-9 rounded-full grid place-items-center hover:bg-white/10"
+            aria-label="Layar penuh"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M8 3H5a2 2 0 00-2 2v3M16 3h3a2 2 0 012 2v3M8 21H5a2 2 0 01-2-2v-3M16 21h3a2 2 0 002-2v-3" />
+            </svg>
+          </button>
+        </div>
+
+        <div className="relative bg-black aspect-video">
+          <video ref={videoRef} controls playsInline className="w-full h-full object-contain" />
+          {loading && !error && (
+            <div className="absolute inset-0 grid place-items-center">
+              <div className="spinner" />
             </div>
-          </div>
-        )}
+          )}
+          {error && (
+            <div className="absolute inset-0 grid place-items-center p-6 text-center text-muted">
+              <div>
+                <p>{error}</p>
+                <a
+                  className="mt-4 inline-block text-accent2 underline"
+                  href={`https://tv12.lk21official.cc/${meta.slug}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Buka di LK21
+                </a>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

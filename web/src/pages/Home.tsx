@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../lib/api";
 import { useAsync } from "../lib/useAsync";
+import { useLibrary } from "../stores/library";
 import type { CatalogItem } from "../types";
 import { PosterCard } from "../components/PosterCard";
 import { Rail } from "../components/Rail";
@@ -10,8 +11,14 @@ import { Spinner } from "../components/Spinner";
 export function Home() {
   const { data, loading, error } = useAsync(() => Promise.all([api.trending(), api.top()]), []);
   const [heroIndex, setHeroIndex] = useState(0);
+  const history = useLibrary((s) => s.history);
   const trending = data?.[0].items ?? [];
   const top = data?.[1].items ?? [];
+
+  const continueItems: CatalogItem[] = history
+    .filter((h) => h.positionSec > 0)
+    .slice(0, 10)
+    .map((h) => ({ slug: h.slug, title: h.title, poster: h.poster ?? null, type: h.type ?? null }));
   const heroItems: CatalogItem[] = trending.slice(0, 3);
   const hero = heroItems[heroIndex];
 
@@ -68,6 +75,7 @@ export function Home() {
         </div>
       )}
 
+      <Rail title="▶ Lanjutkan Menonton" items={continueItems} />
       <Rail title="🔥 Trending Hari Ini" items={trending} action={<Link to="/discover">Lihat semua</Link>} />
       <Rail title="⭐ Rating Tertinggi" items={top} />
 

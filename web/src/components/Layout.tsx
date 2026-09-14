@@ -27,6 +27,15 @@ function HeartIcon() {
     </svg>
   );
 }
+function FilmIcon() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <rect x="3" y="4" width="18" height="16" rx="2" />
+      <path d="M7 4v16M17 4v16M3 9h4M3 15h4M17 9h4M17 15h4" />
+    </svg>
+  );
+}
+
 function UserIcon() {
   return (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -82,7 +91,7 @@ export function Layout() {
           <SearchIcon />Cari
         </NavLink>
         <NavLink to="/discover" className={navClass}>
-          <HeartIcon />Jelajah
+          <FilmIcon />Genre
         </NavLink>
         <NavLink to="/watchlist" className={navClass}>
           <HeartIcon />Watchlist
@@ -116,7 +125,7 @@ export function Layout() {
         <div className="flex-1 overflow-y-auto p-2.5 space-y-1">
           {[
             { to: "/", label: "Home", icon: "🏠" },
-            { to: "/discover", label: "Jelajah", icon: "🎬" },
+            { to: "/discover", label: "Genre", icon: "🎬" },
             { to: "/search", label: "Cari", icon: "🔎" },
             { to: "/watchlist", label: "Watchlist", icon: "♥" },
             { to: "/history", label: "Riwayat", icon: "🕘" },
