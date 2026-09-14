@@ -2,7 +2,9 @@ import type { RouteContext } from "../env";
 import { error, json } from "../http";
 import { DEFAULT_LK21_BASE } from "../lk21/common";
 import { fetchDetailHtml } from "../lk21/detail";
-import { resolveStream } from "../lk21/stream";
+import { resolveFirstServer, resolveStream } from "../lk21/stream";
+import { getStreamMap, saveStreamMap } from "../lk21/streamMap";
+import { vaultCatalog } from "../lk21/vault";
 
 function ensureAdmin(ctx: RouteContext): Response | null {
   if (!ctx.user) return error("Perlu login", 401);
@@ -186,6 +188,43 @@ export async function auditList(ctx: RouteContext): Promise<Response> {
      ORDER BY a.id DESC LIMIT 100`
   ).all();
   return json({ items: rows.results || [] });
+}
+
+export async function streamMapBuild(ctx: RouteContext): Promise<Response> {
+  const guard = ensureAdmin(ctx);
+  if (guard) return guard;
+  const limit = Math.min(100, Math.max(1, Number(ctx.url.searchParams.get("limit") || "30") || 30));
+  const single = ctx.url.searchParams.get("slug");
+  const base = ctx.env.LK21_BASE || DEFAULT_LK21_BASE;
+
+  const slugs: string[] = single
+    ? [single]
+    : (await vaultCatalog(ctx, 1, limit).catch(() => [])).map((i) => i.slug).filter(Boolean);
+
+  let built = 0;
+  let skipped = 0;
+  let failed = 0;
+  for (const slug of slugs) {
+    const existing = await getStreamMap(ctx, slug);
+    if (existing) {
+      skipped++;
+      continue;
+    }
+    try {
+      const { html, url } = await fetchDetailHtml(slug, base);
+      const found = await resolveFirstServer(html, url);
+      if (found) {
+        await saveStreamMap(ctx, slug, found.ref.origin, found.ref.host, found.ref.id);
+        built++;
+      } else {
+        failed++;
+      }
+    } catch {
+      failed++;
+    }
+  }
+  await audit(ctx, "stream_map.build", single || `top:${limit}`, { built, skipped, failed });
+  return json({ total: slugs.length, built, skipped, failed });
 }
 
 export async function streamHealth(ctx: RouteContext): Promise<Response> {

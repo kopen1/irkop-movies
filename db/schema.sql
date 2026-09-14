@@ -87,6 +87,16 @@ CREATE TABLE IF NOT EXISTS curated_items (
   UNIQUE (section, slug)
 );
 
+-- Cache mapping judul -> server player (host + id) agar streaming tidak perlu
+-- mengambil halaman detail tiap kali (halaman detail diblokir dari Worker).
+CREATE TABLE IF NOT EXISTS stream_map (
+  slug       TEXT PRIMARY KEY,
+  origin     TEXT NOT NULL DEFAULT 'https://videonode.de',
+  host       TEXT NOT NULL,
+  player_id  TEXT NOT NULL,
+  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
 CREATE TABLE IF NOT EXISTS audit_logs (
   id       INTEGER PRIMARY KEY AUTOINCREMENT,
   actor_id INTEGER,

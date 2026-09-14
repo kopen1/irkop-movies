@@ -62,6 +62,7 @@ const ROUTES: RouteDef[] = [
   { method: "DELETE", path: "admin/curated/:id", handler: admin.curatedRemove },
   { method: "GET", path: "admin/audit", handler: admin.auditList },
   { method: "GET", path: "admin/stream-health", handler: admin.streamHealth },
+  { method: "GET", path: "admin/stream-map/build", handler: admin.streamMapBuild },
 
   { method: "GET", path: "health", handler: health },
   { method: "GET", path: "debug/lk21", handler: debugUpstreams },

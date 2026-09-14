@@ -2,10 +2,15 @@ import type { RouteContext } from "../env";
 import { error, json } from "../http";
 import { LK21_USER_AGENT, ufetch } from "../lk21/common";
 import { fetchDetailHtml } from "../lk21/detail";
-import { resolveStream } from "../lk21/stream";
+import { resolveByHostId, resolveFirstServer } from "../lk21/stream";
+import { getStreamMap, saveStreamMap } from "../lk21/streamMap";
 
 function base(ctx: RouteContext): string {
   return ctx.env.LK21_BASE || "https://tv12.lk21official.cc";
+}
+
+function proxyUrl(fileUrl: string): string {
+  return "/api/stream/hls?u=" + encodeURIComponent(fileUrl);
 }
 
 export async function play(ctx: RouteContext): Promise<Response> {
@@ -14,20 +19,32 @@ export async function play(ctx: RouteContext): Promise<Response> {
 
   const mirror = (ctx.env.PLAY_MIRROR || "https://xx1.red").replace(/\/+$/, "");
   const fallbackUrl = `${mirror}/${encodeURIComponent(slug)}/`;
+  const referer = `${base(ctx)}/${slug}`;
 
+  // 1) Pakai cache mapping (host+id) -> resolve langsung via videonode/playcdn.
+  //    Host ini TIDAK diblokir dari Worker, jadi tidak perlu halaman detail.
+  const cached = await getStreamMap(ctx, slug);
+  if (cached) {
+    try {
+      const file = await resolveByHostId(cached.origin, cached.host, cached.player_id, referer);
+      if (file) return json({ fileUrl: file, proxy: proxyUrl(file), cached: true });
+    } catch {
+      /* cache kedaluwarsa -> coba refresh di bawah */
+    }
+  }
+
+  // 2) Ambil halaman detail (langsung; kalau diblokir, lewat relay bila ada)
+  //    untuk mengisi/memperbarui cache.
   try {
     const { html, url } = await fetchDetailHtml(slug, base(ctx));
-    const fileUrl = await resolveStream(html, url);
-    if (fileUrl) {
-      return json({
-        provider: "lk21",
-        fileUrl,
-        proxy: "/api/stream/hls?u=" + encodeURIComponent(fileUrl),
-      });
+    const found = await resolveFirstServer(html, url);
+    if (found) {
+      await saveStreamMap(ctx, slug, found.ref.origin, found.ref.host, found.ref.id);
+      return json({ fileUrl: found.fileUrl, proxy: proxyUrl(found.fileUrl), cached: false });
     }
     return json({ fileUrl: null, fallbackUrl, reason: "stream-unavailable" });
   } catch (e) {
-    // Biasanya 403 dari detail mirror saat Worker diblokir.
+    // Biasanya 403 dari halaman detail saat Worker diblokir dan tanpa relay.
     return json({ fileUrl: null, fallbackUrl, reason: (e as Error).message });
   }
 }
