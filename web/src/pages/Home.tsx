@@ -21,7 +21,13 @@ export function Home() {
   const continueItems: CatalogItem[] = history
     .filter((h) => h.positionSec > 0)
     .slice(0, 10)
-    .map((h) => ({ slug: h.slug, title: h.title, poster: h.poster ?? null, type: h.type ?? null }));
+    .map((h) => ({
+      slug: h.slug,
+      title: h.title,
+      poster: h.poster ?? null,
+      type: h.type ?? null,
+      progress: h.durationSec ? (h.positionSec / h.durationSec) * 100 : 0,
+    }));
   const heroItems: CatalogItem[] = trending.slice(0, 3);
   const hero = heroItems[heroIndex];
 

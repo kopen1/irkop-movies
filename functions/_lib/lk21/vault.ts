@@ -119,6 +119,22 @@ export async function vaultCatalog(ctx: RouteContext, page = 1, size = 24): Prom
   return items.slice(0, size);
 }
 
+// Katalog terfilter per tipe (movie/series). Ambil ~2x lalu saring.
+export async function vaultCatalogFiltered(
+  ctx: RouteContext,
+  page: number,
+  size: number,
+  type: string
+): Promise<CatalogItem[]> {
+  const max = await getMaxId(ctx);
+  const top = max - (page - 1) * size;
+  const ids: number[] = [];
+  for (let i = 0; i < size * 2 + 20; i++) ids.push(top - i);
+  const items = await vaultByIds(ids);
+  const filtered = items.filter((i) => i.type === type);
+  return filtered.slice(0, size);
+}
+
 export async function vaultDetail(id: number): Promise<CatalogItem | null> {
   if (!Number.isFinite(id) || id <= 0) return null;
   const items = await vaultByIds([id]);

@@ -37,6 +37,11 @@ export function PosterCard({ item }: { item: CatalogItem }) {
             {item.quality}
           </span>
         )}
+        {item.progress != null && item.progress > 0 && (
+          <div className="absolute bottom-0 left-0 right-0 h-1 bg-black/60">
+            <div className="h-full bg-accent" style={{ width: `${Math.min(100, item.progress)}%` }} />
+          </div>
+        )}
       </div>
       <p className="mt-1.5 text-xs font-semibold leading-tight line-clamp-2">{item.title}</p>
       <p className="text-[11px] text-muted">{item.year || "—"}</p>

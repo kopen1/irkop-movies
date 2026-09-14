@@ -50,6 +50,14 @@ export const api = {
     ),
   detail: (slug: string, id?: number | null) =>
     request<DetailData>(`/catalog/detail/${encodeURIComponent(slug)}${id ? `?id=${id}` : ""}`),
+  list: (type: "movie" | "series", page = 1) =>
+    request<{ items: CatalogItem[]; page: number; type: string }>(
+      `/catalog/list?t=${type}&page=${page}`
+    ),
+  episodes: (slug: string) =>
+    request<{ items: { season: number; episode: number; slug: string }[]; error?: string }>(
+      `/catalog/episodes?slug=${encodeURIComponent(slug)}`
+    ),
   related: (params: { ids?: number[]; type?: "movie" | "series" }) => {
     const sp = new URLSearchParams();
     if (params.ids?.length) sp.set("ids", params.ids.join(","));

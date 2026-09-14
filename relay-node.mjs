@@ -20,6 +20,7 @@
 
 import http from "node:http";
 import { Readable } from "node:stream";
+import { execFile } from "node:child_process";
 
 const PORT = Number(process.env.PORT) || 8080;
 const UA =
@@ -30,6 +31,29 @@ const CORS = {
   "access-control-allow-methods": "GET,POST,OPTIONS",
   "access-control-allow-headers": "*",
 };
+
+// Cadangan: ambil via curl (fingerprint-nya lolos, sedangkan Node fetch kena 403
+// di beberapa host seperti gudangvape).
+function curlFetch(target, method, headers, bodyBuf) {
+  return new Promise((resolve) => {
+    const args = ["-s", "-L", "--max-time", "90", "-X", method, "-A", headers["user-agent"] || UA];
+    for (const [k, v] of Object.entries(headers)) {
+      if (["user-agent", "content-length", "host", "connection"].includes(k)) continue;
+      args.push("-H", `${k}: ${v}`);
+    }
+    args.push("-w", "\n__HTTP__%{http_code}", target);
+    const child = execFile("curl", args, { maxBuffer: 30 * 1024 * 1024, encoding: "buffer" }, (err, stdout) => {
+      if (err || !stdout) return resolve(null);
+      const marker = Buffer.from("\n__HTTP__");
+      const idx = stdout.lastIndexOf(marker);
+      if (idx < 0) return resolve(null);
+      const code = parseInt(stdout.slice(idx + marker.length).toString(), 10);
+      resolve({ status: code, body: stdout.slice(0, idx) });
+    });
+    if (bodyBuf && bodyBuf.length) child.stdin.write(bodyBuf);
+    child.stdin.end();
+  });
+}
 
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, `http://localhost:${PORT}`);
@@ -42,7 +66,7 @@ const server = http.createServer(async (req, res) => {
   const target = url.searchParams.get("url");
   if (!target) {
     res.writeHead(200, { "content-type": "application/json", ...CORS });
-    return res.end(JSON.stringify({ role: "nontongo-relay-node", ok: true, v: 2 }));
+    return res.end(JSON.stringify({ role: "nontongo-relay-node", ok: true, v: 3 }));
   }
 
   try {
@@ -84,12 +108,22 @@ const server = http.createServer(async (req, res) => {
       body = Buffer.concat(chunks);
     }
 
-    const upstream = await fetch(target, {
+    let upstream = await fetch(target, {
       method: req.method,
       headers,
       body,
       redirect: "follow",
     });
+
+    // Beberapa host (mis. gudangvape.com) membalas 403 ke fingerprint Node.
+    // Ulangi lewat curl yang fingerprint-nya lolos.
+    if (upstream.status === 403) {
+      const alt = await curlFetch(target, req.method, headers, body);
+      if (alt && alt.status >= 200 && alt.status < 400) {
+        res.writeHead(alt.status, { ...CORS });
+        return res.end(alt.body);
+      }
+    }
 
     const outHeaders = {};
     upstream.headers.forEach((value, key) => {

@@ -16,6 +16,7 @@ export interface CatalogItem {
   runtime?: string | null;
   type?: string | null;
   poster?: string | null;
+  progress?: number;
 }
 
 export interface DetailData {

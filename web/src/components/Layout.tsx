@@ -126,6 +126,8 @@ export function Layout() {
           {[
             { to: "/", label: "Home", icon: "🏠" },
             { to: "/discover", label: "Genre", icon: "🎬" },
+            { to: "/movies", label: "Film", icon: "🎞" },
+            { to: "/series", label: "Series", icon: "📺" },
             { to: "/search", label: "Cari", icon: "🔎" },
             { to: "/watchlist", label: "Watchlist", icon: "♥" },
             { to: "/history", label: "Riwayat", icon: "🕘" },

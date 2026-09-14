@@ -33,6 +33,16 @@ export function Detail() {
     [data?.postId]
   );
 
+  const isSeries = (data?.type || stateItem?.type) === "series";
+  const episodesQuery = useAsync(
+    () =>
+      isSeries
+        ? api.episodes(slug)
+        : Promise.resolve({ items: [] as { season: number; episode: number; slug: string }[] }),
+    [slug, isSeries]
+  );
+  const [playSlug, setPlaySlug] = useState<string | null>(null);
+
   const inWatchlist = useMemo(() => watchlist.some((i) => i.slug === slug), [watchlist, slug]);
 
   function toggleWatchlist() {
@@ -126,7 +136,10 @@ export function Detail() {
 
       <div className="flex gap-3 px-4 mt-4">
         <button
-          onClick={() => setPlaying(true)}
+          onClick={() => {
+            setPlaySlug(view.slug);
+            setPlaying(true);
+          }}
           className="flex-1 bg-accent hover:bg-accent2 rounded-full py-3 font-bold text-sm"
         >
           ▶ Tonton Sekarang
@@ -171,6 +184,32 @@ export function Detail() {
         )}
       </div>
 
+      {isSeries && (
+        <div className="px-4 mt-6">
+          <h3 className="font-bold mb-3">📺 Episode</h3>
+          {episodesQuery.loading ? (
+            <p className="text-xs text-muted">Memuat episode...</p>
+          ) : (episodesQuery.data?.items?.length ?? 0) === 0 ? (
+            <p className="text-xs text-muted">Daftar episode butuh relay aktif.</p>
+          ) : (
+            <div className="grid grid-cols-4 gap-2">
+              {episodesQuery.data!.items.map((ep) => (
+                <button
+                  key={ep.slug}
+                  onClick={() => {
+                    setPlaySlug(ep.slug);
+                    setPlaying(true);
+                  }}
+                  className="bg-surface border border-line rounded-lg py-2 text-xs hover:border-accent2"
+                >
+                  S{ep.season}E{ep.episode}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
       {relatedQuery.data && relatedQuery.data.items.length > 0 && (
         <div className="mt-6">
           <h3 className="font-bold px-4 pb-3">🎬 Rekomendasi Serupa</h3>
@@ -192,7 +231,7 @@ export function Detail() {
         >
           <HlsPlayer
             meta={{
-              slug: view.slug,
+              slug: playSlug || view.slug,
               postId: view.postId,
               postType: view.type,
               title: view.title,

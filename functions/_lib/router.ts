@@ -31,6 +31,8 @@ const ROUTES: RouteDef[] = [
   { method: "GET", path: "catalog/genre", handler: catalog.genre },
   { method: "GET", path: "catalog/search", handler: catalog.search },
   { method: "GET", path: "catalog/suggest", handler: catalog.suggest },
+  { method: "GET", path: "catalog/list", handler: catalog.list },
+  { method: "GET", path: "catalog/episodes", handler: catalog.episodes },
   { method: "GET", path: "catalog/related", handler: catalog.related },
   { method: "GET", path: "catalog/detail/:slug", handler: catalog.detail },
 

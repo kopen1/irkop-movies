@@ -2,11 +2,11 @@ import type { RouteContext } from "../env";
 import { error, json } from "../http";
 import { lk21Listing } from "../lk21/catalog";
 import { DEFAULT_LK21_BASE } from "../lk21/common";
-import { lk21DetailPage, lk21PostDetail } from "../lk21/detail";
+import { fetchDetailHtml, lk21DetailPage, lk21PostDetail } from "../lk21/detail";
 import { lk21Related } from "../lk21/recommend";
 import { lk21Search, lk21SearchSuggest } from "../lk21/search";
 import type { CatalogItem } from "../lk21/search";
-import { vaultCatalog, vaultDetail } from "../lk21/vault";
+import { vaultCatalog, vaultCatalogFiltered, vaultDetail } from "../lk21/vault";
 
 function base(ctx: RouteContext): string {
   return ctx.env.LK21_BASE || DEFAULT_LK21_BASE;
@@ -82,6 +82,37 @@ export async function genre(ctx: RouteContext): Promise<Response> {
   const page = Number(ctx.url.searchParams.get("page") || "1") || 1;
   const items = await feed(ctx, `/genre/${encodeURIComponent(g)}/page/${page}`, page);
   return json({ items, genre: g, page });
+}
+
+export async function list(ctx: RouteContext): Promise<Response> {
+  const type = ctx.url.searchParams.get("t") === "series" ? "series" : "movie";
+  const page = Number(ctx.url.searchParams.get("page") || "1") || 1;
+  const items = await vaultCatalogFiltered(ctx, page, 24, type).catch(() => [] as CatalogItem[]);
+  return json({ items, page, type });
+}
+
+export async function episodes(ctx: RouteContext): Promise<Response> {
+  const slug = ctx.url.searchParams.get("slug") || "";
+  if (!slug) return error("slug wajib", 400);
+  try {
+    const { html } = await fetchDetailHtml(slug, base(ctx));
+    const seen = new Set<string>();
+    const out: { season: number; episode: number; slug: string }[] = [];
+    const re = /href="\/([a-z0-9-]*season-(\d+)-episode-(\d+)-(\d{4}))"/gi;
+    let match: RegExpExecArray | null;
+    while ((match = re.exec(html)) !== null) {
+      const season = Number(match[2]);
+      const episode = Number(match[3]);
+      const key = `${season}-${episode}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      out.push({ season, episode, slug: match[1] });
+    }
+    out.sort((a, b) => a.season - b.season || a.episode - b.episode);
+    return json({ items: out });
+  } catch (err) {
+    return json({ items: [], error: (err as Error).message });
+  }
 }
 
 async function searchViaListing(ctx: RouteContext, q: string): Promise<CatalogItem[]> {
