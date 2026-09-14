@@ -47,9 +47,34 @@ const server = http.createServer(async (req, res) => {
 
   try {
     const headers = { ...req.headers };
-    delete headers.host;
-    delete headers["content-length"];
-    delete headers.connection;
+    // Buang header proxy/Cloudflare — kalau diteruskan, upstream (videonode dll)
+    // mendeteksinya dan membalas 403.
+    const DROP = [
+      "host",
+      "content-length",
+      "connection",
+      "accept-encoding",
+      "forwarded",
+      "x-forwarded-for",
+      "x-forwarded-proto",
+      "x-forwarded-host",
+      "x-forwarded-server",
+      "x-real-ip",
+      "true-client-ip",
+      "cf-connecting-ip",
+      "cf-ipcountry",
+      "cf-ray",
+      "cf-visitor",
+      "cf-worker",
+      "cf-ew-via",
+      "cf-request-id",
+      "cdn-loop",
+    ];
+    for (const key of Object.keys(headers)) {
+      if (DROP.includes(key) || key.startsWith("cf-") || key.startsWith("x-forwarded")) {
+        delete headers[key];
+      }
+    }
     headers["user-agent"] = UA;
 
     let body;
