@@ -54,12 +54,37 @@ export async function genre(ctx: RouteContext): Promise<Response> {
   return json({ items, genre: g, page });
 }
 
+async function searchViaListing(ctx: RouteContext, q: string): Promise<CatalogItem[]> {
+  const needle = q.toLowerCase();
+  const out: CatalogItem[] = [];
+  const seen = new Set<string>();
+  for (const p of [1, 2, 3, 4, 5]) {
+    try {
+      const items = await lk21Listing(`/latest/page/${p}`, base(ctx));
+      for (const it of items) {
+        if (it.title.toLowerCase().includes(needle) && !seen.has(it.slug)) {
+          seen.add(it.slug);
+          out.push(it);
+        }
+      }
+    } catch {
+      break;
+    }
+  }
+  return out;
+}
+
 export async function search(ctx: RouteContext): Promise<Response> {
   const q = (ctx.url.searchParams.get("q") || "").trim();
   const page = Number(ctx.url.searchParams.get("page") || "1") || 1;
   if (!q) return json({ items: [], totalPages: 0, query: q });
-  const result = await lk21Search(q, page);
-  return json({ ...result, query: q });
+  try {
+    const result = await lk21Search(q, page);
+    return json({ ...result, query: q, source: "search" });
+  } catch {
+    const items = await searchViaListing(ctx, q).catch(() => [] as CatalogItem[]);
+    return json({ items, totalPages: 1, query: q, source: "listing-fallback" });
+  }
 }
 
 export async function suggest(ctx: RouteContext): Promise<Response> {
