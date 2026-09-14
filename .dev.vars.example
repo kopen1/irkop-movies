@@ -5,6 +5,8 @@ GOOGLE_CLIENT_ID=GANTI_GOOGLE_CLIENT_ID
 GOOGLE_CLIENT_SECRET=GANTI_GOOGLE_CLIENT_SECRET
 SESSION_SECRET=GANTI_RANDOM_STRING_PANJANG
 LK21_BASE=https://tv12.lk21official.cc
+PLAY_MIRROR=https://xx1.red
+# VAULT_MAX_ID=34650
 
 # Opsional. Isi HANYA jika upstream memblokir Worker (error "upstream 403").
 # Lihat file deno.ts di root untuk cara deploy relay.

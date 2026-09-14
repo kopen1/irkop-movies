@@ -15,6 +15,10 @@ APP_BASE_URL = "https://irkop-movies.pages.dev/"
 #GOOGLE_CLIENT_ID = "GANTI_GOOGLE_CLIENT_ID"
 # Basis situs sumber katalog
 LK21_BASE = "https://tv12.lk21official.cc"
+# Mirror untuk tombol Tonton (buka tab baru saat Worker diblokir upstream)
+PLAY_MIRROR = "https://xx1.red"
+# Opsional: batas ID tertinggi vault. Kosong = deteksi otomatis (di-cache di D1)
+# VAULT_MAX_ID = "34650"
 # Opsional: set jika upstream memblokir Worker (error "upstream 403").
 # Lihat deno.ts. Contoh: RELAY_URL = "https://<relay>.deno.dev/?url="
 # RELAY_URL = ""

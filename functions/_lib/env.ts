@@ -6,6 +6,10 @@ export interface Env {
   SESSION_SECRET: string;
   LK21_BASE: string;
   RELAY_URL?: string;
+  // ID tertinggi di vault (opsional). Kalau kosong, dideteksi & di-cache di D1.
+  VAULT_MAX_ID?: string;
+  // URL mirror untuk fallback "Tonton" di tab baru (browser lolos challenge).
+  PLAY_MIRROR?: string;
 }
 
 export interface AppContext {

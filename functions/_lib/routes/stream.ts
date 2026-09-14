@@ -11,10 +11,25 @@ function base(ctx: RouteContext): string {
 export async function play(ctx: RouteContext): Promise<Response> {
   const slug = ctx.url.searchParams.get("slug") || "";
   if (!slug) return error("slug wajib", 400);
-  const { html, url } = await fetchDetailHtml(slug, base(ctx));
-  const fileUrl = await resolveStream(html, url);
-  if (!fileUrl) return error("Stream tidak ditemukan", 502);
-  return json({ provider: "lk21", fileUrl, proxy: "/api/stream/hls?u=" + encodeURIComponent(fileUrl) });
+
+  const mirror = (ctx.env.PLAY_MIRROR || "https://xx1.red").replace(/\/+$/, "");
+  const fallbackUrl = `${mirror}/${encodeURIComponent(slug)}/`;
+
+  try {
+    const { html, url } = await fetchDetailHtml(slug, base(ctx));
+    const fileUrl = await resolveStream(html, url);
+    if (fileUrl) {
+      return json({
+        provider: "lk21",
+        fileUrl,
+        proxy: "/api/stream/hls?u=" + encodeURIComponent(fileUrl),
+      });
+    }
+    return json({ fileUrl: null, fallbackUrl, reason: "stream-unavailable" });
+  } catch (e) {
+    // Biasanya 403 dari detail mirror saat Worker diblokir.
+    return json({ fileUrl: null, fallbackUrl, reason: (e as Error).message });
+  }
 }
 
 export async function hls(ctx: RouteContext): Promise<Response> {

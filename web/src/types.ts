@@ -27,6 +27,8 @@ export interface DetailData {
   postId: number | null;
   type: string | null;
   url: string;
+  runtime?: string | null;
+  rating?: number | null;
 }
 
 export interface WatchlistItem {

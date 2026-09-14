@@ -4,42 +4,15 @@ import { useAsync } from "../lib/useAsync";
 import { PosterCard } from "../components/PosterCard";
 import { Spinner } from "../components/Spinner";
 
-const GENRES: { label: string; slug: string }[] = [
-  { label: "Action", slug: "action" },
-  { label: "Adventure", slug: "adventure" },
-  { label: "Animation", slug: "animation" },
-  { label: "Comedy", slug: "comedy" },
-  { label: "Crime", slug: "crime" },
-  { label: "Drama", slug: "drama" },
-  { label: "Horror", slug: "horror" },
-  { label: "Mystery", slug: "mystery" },
-  { label: "Romance", slug: "romance" },
-  { label: "Sci-Fi", slug: "sci-fi" },
-  { label: "Thriller", slug: "thriller" },
-];
-
 export function Discover() {
-  const [genre, setGenre] = useState("action");
   const [page, setPage] = useState(1);
-  const { data, loading } = useAsync(() => api.genre(genre, page), [genre, page]);
+  const { data, loading } = useAsync(() => api.latest(page), [page]);
 
   return (
     <div className="pt-4">
-      <div className="flex gap-2 overflow-x-auto px-4 pb-4 no-scrollbar">
-        {GENRES.map((g) => (
-          <button
-            key={g.slug}
-            onClick={() => {
-              setGenre(g.slug);
-              setPage(1);
-            }}
-            className={`whitespace-nowrap px-4 py-2 rounded-full border text-xs font-semibold ${
-              genre === g.slug ? "bg-accent border-accent text-white" : "bg-surface border-line text-muted"
-            }`}
-          >
-            {g.label}
-          </button>
-        ))}
+      <div className="px-4 pb-3">
+        <h1 className="text-xl font-extrabold">🎬 Jelajahi Film</h1>
+        <p className="text-[11px] text-muted mt-1">Katalog terbaru, halaman {page}.</p>
       </div>
 
       {loading ? (
@@ -51,6 +24,9 @@ export function Discover() {
               <PosterCard key={item.slug} item={item} />
             ))}
           </div>
+          {(data?.items ?? []).length === 0 && (
+            <p className="text-center text-muted text-sm mt-10">Tidak ada item.</p>
+          )}
           <div className="flex justify-center gap-3 mt-5 mb-4">
             <button
               disabled={page <= 1}

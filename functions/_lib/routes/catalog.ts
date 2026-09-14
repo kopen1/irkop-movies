@@ -5,29 +5,53 @@ import { lk21DetailPage, lk21PostDetail } from "../lk21/detail";
 import { lk21Related } from "../lk21/recommend";
 import { lk21Search, lk21SearchSuggest } from "../lk21/search";
 import type { CatalogItem } from "../lk21/search";
+import { vaultCatalog, vaultDetail } from "../lk21/vault";
 
 function base(ctx: RouteContext): string {
   return ctx.env.LK21_BASE || "https://tv12.lk21official.cc";
 }
 
-// Ambil feed. Jika listing HTML diblokir (mis. 403 dari Worker), fallback ke
-// search API `s=*` yang mengembalikan katalog JSON.
-async function feed(ctx: RouteContext, path: string, page: number, sortByRating = false): Promise<CatalogItem[]> {
+interface FeedOpts {
+  sortByRating?: boolean;
+  size?: number;
+}
+
+// Ambil feed dengan rantai fallback:
+//   1) scrape listing mirror (paling lengkap, tapi diblokir dari Worker)
+//   2) search API `s=*` (JSON)
+//   3) enumerasi vault (host yang lolos dari Worker)
+async function feed(ctx: RouteContext, path: string, page: number, opts: FeedOpts = {}): Promise<CatalogItem[]> {
+  const size = opts.size ?? 24;
   try {
     return await lk21Listing(path, base(ctx));
   } catch (listingError) {
     try {
-      const pages = sortByRating ? [1, 2, 3] : [page];
+      const pages = opts.sortByRating ? [1, 2, 3] : [page];
       const all: CatalogItem[] = [];
       for (const p of pages) {
         const res = await lk21Search("*", p);
         all.push(...res.items);
       }
-      if (sortByRating) all.sort((a, b) => (b.rating || 0) - (a.rating || 0));
-      return all.slice(0, 24);
+      if (all.length) {
+        if (opts.sortByRating) all.sort((a, b) => (b.rating || 0) - (a.rating || 0));
+        return all.slice(0, size);
+      }
     } catch {
-      throw listingError;
+      /* lanjut ke vault */
     }
+
+    try {
+      let items = await vaultCatalog(ctx, page, size);
+      if (opts.sortByRating) {
+        const extra = await vaultCatalog(ctx, page + 1, size).catch(() => [] as CatalogItem[]);
+        items = items.concat(extra).sort((a, b) => (b.rating || 0) - (a.rating || 0)).slice(0, size);
+      }
+      if (items.length) return items;
+    } catch {
+      /* tidak ada sumber */
+    }
+
+    throw listingError;
   }
 }
 
@@ -37,7 +61,7 @@ export async function trending(ctx: RouteContext): Promise<Response> {
 }
 
 export async function top(ctx: RouteContext): Promise<Response> {
-  const items = await feed(ctx, "/rating/page/1", 2, true);
+  const items = await feed(ctx, "/rating/page/1", 2, { sortByRating: true });
   return json({ items });
 }
 
@@ -74,47 +98,102 @@ async function searchViaListing(ctx: RouteContext, q: string): Promise<CatalogIt
   return out;
 }
 
+async function searchViaVault(ctx: RouteContext, q: string): Promise<CatalogItem[]> {
+  const needle = q.toLowerCase();
+  const out: CatalogItem[] = [];
+  const seen = new Set<string>();
+  for (const p of [1, 2, 3, 4, 5]) {
+    const items = await vaultCatalog(ctx, p, 24).catch(() => [] as CatalogItem[]);
+    for (const it of items) {
+      if (it.title.toLowerCase().includes(needle) && !seen.has(it.slug)) {
+        seen.add(it.slug);
+        out.push(it);
+      }
+    }
+  }
+  return out;
+}
+
 export async function search(ctx: RouteContext): Promise<Response> {
   const q = (ctx.url.searchParams.get("q") || "").trim();
   const page = Number(ctx.url.searchParams.get("page") || "1") || 1;
   if (!q) return json({ items: [], totalPages: 0, query: q });
+
   try {
     const result = await lk21Search(q, page);
     return json({ ...result, query: q, source: "search" });
   } catch {
-    const items = await searchViaListing(ctx, q).catch(() => [] as CatalogItem[]);
-    return json({ items, totalPages: 1, query: q, source: "listing-fallback" });
+    /* fallback */
   }
+
+  let items = await searchViaListing(ctx, q).catch(() => [] as CatalogItem[]);
+  if (!items.length) {
+    items = await searchViaVault(ctx, q).catch(() => [] as CatalogItem[]);
+  }
+  return json({ items, totalPages: 1, query: q, source: "fallback" });
 }
 
 export async function suggest(ctx: RouteContext): Promise<Response> {
   const q = (ctx.url.searchParams.get("q") || "").trim();
   if (!q) return json({ items: [] });
-  return json({ items: await lk21SearchSuggest(q) });
+  return json({ items: await lk21SearchSuggest(q).catch(() => []) });
 }
 
 export async function detail(ctx: RouteContext): Promise<Response> {
   const slug = ctx.params.slug;
   if (!slug) return error("slug wajib", 400);
-  const data = await lk21DetailPage(slug, base(ctx));
-  let post: Awaited<ReturnType<typeof lk21PostDetail>>[number] | null = null;
-  if (data.postId) {
-    try {
-      post = (await lk21PostDetail([data.postId]))[0] || null;
-    } catch {
-      post = null;
+  const id = Number(ctx.url.searchParams.get("id"));
+
+  if (Number.isFinite(id) && id > 0) {
+    const item = await vaultDetail(id).catch(() => null);
+    if (item) {
+      return json({
+        slug: item.slug || slug,
+        title: item.title,
+        year: item.year ?? null,
+        overview: "",
+        poster: item.poster ?? null,
+        postId: id,
+        type: item.type ?? null,
+        runtime: item.runtime ?? null,
+        rating: item.rating ?? null,
+        url: "",
+      });
     }
   }
-  return json({
-    slug: data.slug,
-    title: post?.title || data.title,
-    year: post?.year ? String(post.year) : data.year,
-    overview: data.overview,
-    poster: post?.poster || data.poster,
-    postId: data.postId,
-    type: data.type,
-    url: data.url,
-  });
+
+  try {
+    const data = await lk21DetailPage(slug, base(ctx));
+    let post: Awaited<ReturnType<typeof lk21PostDetail>>[number] | null = null;
+    if (data.postId) {
+      post = (await lk21PostDetail([data.postId]))[0] || null;
+    }
+    return json({
+      slug: data.slug,
+      title: post?.title || data.title,
+      year: post?.year ? String(post.year) : data.year,
+      overview: data.overview,
+      poster: post?.poster || data.poster,
+      postId: data.postId,
+      type: data.type,
+      runtime: post?.runtime ?? null,
+      rating: post?.rating != null ? Number(post.rating) : null,
+      url: data.url,
+    });
+  } catch {
+    return json({
+      slug,
+      title: slug,
+      year: null,
+      overview: "",
+      poster: null,
+      postId: null,
+      type: null,
+      runtime: null,
+      rating: null,
+      url: "",
+    });
+  }
 }
 
 export async function related(ctx: RouteContext): Promise<Response> {

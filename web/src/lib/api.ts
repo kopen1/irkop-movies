@@ -43,14 +43,18 @@ export const api = {
       `/catalog/search?q=${encodeURIComponent(q)}&page=${page}`
     ),
   suggest: (q: string) => request<{ items: { title: string; slug: string; type: string }[] }>(`/catalog/suggest?q=${encodeURIComponent(q)}`),
-  detail: (slug: string) => request<DetailData>(`/catalog/detail/${encodeURIComponent(slug)}`),
+  detail: (slug: string, id?: number | null) =>
+    request<DetailData>(`/catalog/detail/${encodeURIComponent(slug)}${id ? `?id=${id}` : ""}`),
   related: (params: { ids?: number[]; type?: "movie" | "series" }) => {
     const sp = new URLSearchParams();
     if (params.ids?.length) sp.set("ids", params.ids.join(","));
     if (params.type) sp.set("type", params.type);
     return request<{ items: CatalogItem[]; basedOn: number }>(`/catalog/related?${sp.toString()}`);
   },
-  play: (slug: string) => request<{ fileUrl: string; proxy: string }>(`/stream/play?slug=${encodeURIComponent(slug)}`),
+  play: (slug: string) =>
+    request<{ fileUrl: string | null; proxy?: string; fallbackUrl?: string; reason?: string }>(
+      `/stream/play?slug=${encodeURIComponent(slug)}`
+    ),
 
   watchlist: () => request<{ items: WatchlistItem[] }>("/user/watchlist"),
   watchlistAdd: (payload: Record<string, unknown>) =>

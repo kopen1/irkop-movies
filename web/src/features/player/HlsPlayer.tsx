@@ -12,8 +12,13 @@ interface PlayerMeta {
 
 export function HlsPlayer({ meta, onClose }: { meta: PlayerMeta; onClose: () => void }) {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const onCloseRef = useRef(onClose);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
 
   useEffect(() => {
     let hls: Hls | null = null;
@@ -22,8 +27,17 @@ export function HlsPlayer({ meta, onClose }: { meta: PlayerMeta; onClose: () => 
 
     (async () => {
       try {
-        const { proxy } = await api.play(meta.slug);
+        const res = await api.play(meta.slug);
         if (cancelled || !video) return;
+
+        // Worker diblokir upstream -> buka mirror di tab baru (browser lolos challenge)
+        if (!res.fileUrl) {
+          if (res.fallbackUrl) window.open(res.fallbackUrl, "_blank", "noopener");
+          onCloseRef.current?.();
+          return;
+        }
+        const proxy = res.proxy || res.fileUrl;
+
         if (Hls.isSupported()) {
           hls = new Hls({ maxBufferLength: 30, enableWorker: true });
           hls.loadSource(proxy);

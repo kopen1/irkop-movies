@@ -12,7 +12,7 @@ function initials(title: string): string {
 
 export function PosterCard({ item }: { item: CatalogItem }) {
   return (
-    <Link to={`/detail/${encodeURIComponent(item.slug)}`} className="block group">
+    <Link to={`/detail/${encodeURIComponent(item.slug)}`} state={{ item }} className="block group">
       <div className="relative aspect-[2/3] rounded-2xl overflow-hidden bg-surface2 shadow-lg">
         {item.poster ? (
           <img
