@@ -7,7 +7,7 @@ import * as catalog from "./routes/catalog";
 import * as stream from "./routes/stream";
 import * as user from "./routes/user";
 import * as admin from "./routes/admin";
-import { debugUpstreams } from "./routes/debug";
+import { debugUpstreams, health } from "./routes/debug";
 
 type Handler = (ctx: RouteContext) => Promise<Response>;
 type Method = "GET" | "POST" | "PATCH" | "DELETE";
@@ -63,6 +63,7 @@ const ROUTES: RouteDef[] = [
   { method: "GET", path: "admin/audit", handler: admin.auditList },
   { method: "GET", path: "admin/stream-health", handler: admin.streamHealth },
 
+  { method: "GET", path: "health", handler: health },
   { method: "GET", path: "debug/lk21", handler: debugUpstreams },
 ];
 

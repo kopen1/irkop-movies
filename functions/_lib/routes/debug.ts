@@ -33,6 +33,34 @@ async function fetchText(url: string, accept = "text/html"): Promise<{ status: n
   return { status: r.status, text: await r.text() };
 }
 
+export async function health(ctx: RouteContext): Promise<Response> {
+  const out: Record<string, unknown> = { dbBound: false };
+  try {
+    const envAny = ctx.env as unknown as { DB?: D1Database; db?: D1Database };
+    out.binding = envAny.DB ? "DB" : envAny.db ? "db" : null;
+    const db = envAny.DB || envAny.db;
+    if (!db || typeof db.prepare !== "function") {
+      out.error = "Binding D1 tidak ditemukan. Set nama binding menjadi DB (huruf besar).";
+      return json(out);
+    }
+    out.dbBound = true;
+    if (!envAny.DB) {
+      out.warning = "Binding bernama 'db'. Kode memakai 'DB'. Rename binding menjadi DB.";
+    }
+    const users = await db.prepare("SELECT COUNT(*) AS n FROM users").first<{ n: number }>();
+    out.users = users?.n ?? null;
+    const flags = await db.prepare("SELECT COUNT(*) AS n FROM feature_flags").first<{ n: number }>();
+    out.flags = flags?.n ?? null;
+    const max = await db
+      .prepare("SELECT value FROM feature_flags WHERE key = 'vault_max_id'")
+      .first<{ value: string }>();
+    out.vaultMaxId = max?.value ?? null;
+  } catch (e) {
+    out.error = (e as Error).message;
+  }
+  return json(out);
+}
+
 export async function debugUpstreams(ctx: RouteContext): Promise<Response> {
   const probes: Probe[] = [];
   const relayEnabled = Boolean(ctx.env.RELAY_URL && ctx.env.RELAY_URL.trim());
