@@ -89,4 +89,13 @@ export const api = {
   adminAudit: () => request<{ items: AuditLog[] }>("/admin/audit"),
   adminStreamHealth: (slug: string) =>
     request<{ ok: boolean; fileUrl?: string; error?: string }>(`/admin/stream-health?slug=${encodeURIComponent(slug)}`),
+  adminStreamMapBuild: (params: { limit?: number; page?: number; slug?: string } = {}) => {
+    const sp = new URLSearchParams();
+    if (params.limit) sp.set("limit", String(params.limit));
+    if (params.page) sp.set("page", String(params.page));
+    if (params.slug) sp.set("slug", params.slug);
+    return request<{ total: number; built: number; skipped: number; failed: number }>(
+      `/admin/stream-map/build?${sp.toString()}`
+    );
+  },
 };
