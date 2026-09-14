@@ -42,7 +42,7 @@ const server = http.createServer(async (req, res) => {
   const target = url.searchParams.get("url");
   if (!target) {
     res.writeHead(200, { "content-type": "application/json", ...CORS });
-    return res.end(JSON.stringify({ role: "nontongo-relay-node", ok: true }));
+    return res.end(JSON.stringify({ role: "nontongo-relay-node", ok: true, v: 2 }));
   }
 
   try {
