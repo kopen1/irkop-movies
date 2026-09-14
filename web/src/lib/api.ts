@@ -44,7 +44,10 @@ export const api = {
     request<{ items: CatalogItem[]; totalPages: number; query: string }>(
       `/catalog/search?q=${encodeURIComponent(q)}&page=${page}`
     ),
-  suggest: (q: string) => request<{ items: { title: string; slug: string; type: string }[] }>(`/catalog/suggest?q=${encodeURIComponent(q)}`),
+  suggest: (q: string) =>
+    request<{ items: { title: string; slug: string; type: string | null }[] }>(
+      `/catalog/suggest?q=${encodeURIComponent(q)}`
+    ),
   detail: (slug: string, id?: number | null) =>
     request<DetailData>(`/catalog/detail/${encodeURIComponent(slug)}${id ? `?id=${id}` : ""}`),
   related: (params: { ids?: number[]; type?: "movie" | "series" }) => {

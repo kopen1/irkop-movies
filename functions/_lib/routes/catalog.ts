@@ -142,7 +142,29 @@ export async function search(ctx: RouteContext): Promise<Response> {
 export async function suggest(ctx: RouteContext): Promise<Response> {
   const q = (ctx.url.searchParams.get("q") || "").trim();
   if (!q) return json({ items: [] });
-  return json({ items: await lk21SearchSuggest(q).catch(() => []) });
+
+  // 1) Search-suggest resmi (butuh relay aktif)
+  try {
+    const items = await lk21SearchSuggest(q);
+    if (items.length) return json({ items: items.slice(0, 10) });
+  } catch {
+    /* lanjut fallback */
+  }
+
+  // 2) Fallback: filter dari beberapa halaman vault (tanpa relay)
+  const needle = q.toLowerCase();
+  const out: { title: string; slug: string; type: string | null }[] = [];
+  const seen = new Set<string>();
+  for (const p of [1, 2]) {
+    const items = await vaultCatalog(ctx, p, 24).catch(() => [] as CatalogItem[]);
+    for (const it of items) {
+      if (it.title.toLowerCase().includes(needle) && !seen.has(it.slug)) {
+        seen.add(it.slug);
+        out.push({ title: it.title, slug: it.slug, type: it.type ?? null });
+      }
+    }
+  }
+  return json({ items: out.slice(0, 10) });
 }
 
 export async function detail(ctx: RouteContext): Promise<Response> {

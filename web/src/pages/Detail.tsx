@@ -75,6 +75,20 @@ export function Detail() {
     url: data?.url || "",
   };
 
+  async function share() {
+    const url = window.location.href;
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: view.title, url });
+      } else if (navigator.clipboard) {
+        await navigator.clipboard.writeText(url);
+        toast("Link disalin");
+      }
+    } catch {
+      /* dibatalkan */
+    }
+  }
+
   return (
     <div className="pb-8">
       <div className="relative h-[clamp(260px,70vw,330px)]">
@@ -87,6 +101,17 @@ export function Detail() {
         >
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M15 18l-6-6 6-6" />
+          </svg>
+        </button>
+        <button
+          className="absolute top-3 right-3 w-11 h-11 rounded-full grid place-items-center bg-black/50 backdrop-blur"
+          onClick={share}
+          aria-label="Bagikan"
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M4 12v8h16v-8" />
+            <path d="M12 3v12" />
+            <path d="M8 7l4-4 4 4" />
           </svg>
         </button>
         <div className="absolute left-0 right-0 bottom-0 p-5">

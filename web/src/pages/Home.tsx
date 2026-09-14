@@ -7,6 +7,7 @@ import type { CatalogItem } from "../types";
 import { PosterCard } from "../components/PosterCard";
 import { Rail } from "../components/Rail";
 import { Spinner } from "../components/Spinner";
+import { GridSkeleton } from "../components/Skeleton";
 
 export function Home() {
   const { data, loading, error } = useAsync(() => Promise.all([api.trending(), api.top()]), []);
@@ -88,7 +89,7 @@ export function Home() {
         </div>
 
         {latestQuery.loading ? (
-          <Spinner />
+          <GridSkeleton count={6} />
         ) : (
           <div className="grid grid-cols-2 gap-3 px-4">
             {(latestQuery.data?.items ?? []).map((item) => (

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { api } from "../lib/api";
 import { useAsync } from "../lib/useAsync";
 import { PosterCard } from "../components/PosterCard";
-import { Spinner } from "../components/Spinner";
+import { GridSkeleton } from "../components/Skeleton";
 
 const GENRES: { label: string; slug: string }[] = [
   { label: "Action", slug: "action" },
@@ -54,7 +54,7 @@ export function Discover() {
       </div>
 
       {loading ? (
-        <Spinner label="Memuat..." />
+        <GridSkeleton count={8} />
       ) : (
         <>
           {items.length === 0 ? (
