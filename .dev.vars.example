@@ -9,5 +9,5 @@ PLAY_MIRROR=https://xx1.red
 # VAULT_MAX_ID=34650
 
 # Opsional. Isi HANYA jika upstream memblokir Worker (error "upstream 403").
-# Lihat file deno.ts di root untuk cara deploy relay.
-# RELAY_URL=https://<relay>.deno.dev/?url=
+# Jalankan: node relay-node.mjs  +  cloudflared tunnel --url http://localhost:8080
+# RELAY_URL=https://<tunnel>.trycloudflare.com/?url=

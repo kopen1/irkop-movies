@@ -217,7 +217,7 @@ export async function debugUpstreams(ctx: RouteContext): Promise<Response> {
         : "Relay aktif tapi upstream tetap 403. Coba relay lain (Vercel/Render/VPS) atau IP residensial."
       : workingBase
         ? `Set LK21_BASE = ${workingBase} (katalog jalan, stream terbatas).`
-        : "Tidak ada mirror yang lolos. Deploy relay (relay/deno.ts) lalu set RELAY_URL, kemudian jalankan debug ini lagi.",
+        : "Tidak ada mirror yang lolos. Jalankan relay-node.mjs (IP residensial) + set RELAY_URL, lalu jalankan debug ini lagi.",
     probes,
   });
 }

@@ -3,6 +3,7 @@ import { api } from "../lib/api";
 import { useAsync } from "../lib/useAsync";
 import { PosterCard } from "../components/PosterCard";
 import { GridSkeleton } from "../components/Skeleton";
+import { Pagination } from "../components/Pagination";
 
 const GENRES: { label: string; slug: string }[] = [
   { label: "Action", slug: "action" },
@@ -68,22 +69,7 @@ export function Discover() {
               ))}
             </div>
           )}
-          <div className="flex justify-center gap-3 mt-5 mb-4">
-            <button
-              disabled={page <= 1}
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-              className="px-4 py-2 rounded-lg bg-surface border border-line text-sm disabled:opacity-40"
-            >
-              ← Prev
-            </button>
-            <span className="px-3 py-2 text-sm">Hal. {page}</span>
-            <button
-              onClick={() => setPage((p) => p + 1)}
-              className="px-4 py-2 rounded-lg bg-surface border border-line text-sm"
-            >
-              Next →
-            </button>
-          </div>
+          <Pagination page={page} totalPages={data?.totalPages} onPage={setPage} />
         </>
       )}
     </div>

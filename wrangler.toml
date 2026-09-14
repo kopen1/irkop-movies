@@ -20,7 +20,8 @@ PLAY_MIRROR = "https://xx1.red"
 # Opsional: batas ID tertinggi vault. Kosong = deteksi otomatis (di-cache di D1)
 # VAULT_MAX_ID = "34650"
 # Opsional: set jika upstream memblokir Worker (error "upstream 403").
-# Lihat deno.ts. Contoh: RELAY_URL = "https://<relay>.deno.dev/?url="
+# Jalankan relay-node.mjs di IP residensial + cloudflared, lalu isi:
+# RELAY_URL = "https://<tunnel>.trycloudflare.com/?url="
 # RELAY_URL = ""
 
 # Secret (JANGAN ditulis di sini). Set lewat:

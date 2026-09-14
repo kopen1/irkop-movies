@@ -35,11 +35,16 @@ export const api = {
     request<{ user: User }>("/auth/admin", { method: "POST", body: JSON.stringify({ email }) }),
   logout: () => request<{ ok: boolean }>("/auth/logout", { method: "POST" }),
 
-  trending: () => request<{ items: CatalogItem[] }>("/catalog/trending"),
-  top: () => request<{ items: CatalogItem[] }>("/catalog/top"),
-  latest: (page = 1) => request<{ items: CatalogItem[]; page: number }>(`/catalog/latest?page=${page}`),
+  trending: () => request<{ items: CatalogItem[]; totalPages: number }>("/catalog/trending"),
+  top: () => request<{ items: CatalogItem[]; totalPages: number }>("/catalog/top"),
+  popular: (page = 1) =>
+    request<{ items: CatalogItem[]; totalPages: number; page: number }>(`/catalog/popular?page=${page}`),
+  latest: (page = 1) =>
+    request<{ items: CatalogItem[]; totalPages: number; page: number }>(`/catalog/latest?page=${page}`),
   genre: (g: string, page = 1) =>
-    request<{ items: CatalogItem[]; genre: string; page: number }>(`/catalog/genre?g=${encodeURIComponent(g)}&page=${page}`),
+    request<{ items: CatalogItem[]; totalPages: number; genre: string; page: number }>(
+      `/catalog/genre?g=${encodeURIComponent(g)}&page=${page}`
+    ),
   search: (q: string, page = 1) =>
     request<{ items: CatalogItem[]; totalPages: number; query: string }>(
       `/catalog/search?q=${encodeURIComponent(q)}&page=${page}`
@@ -51,7 +56,7 @@ export const api = {
   detail: (slug: string, id?: number | null) =>
     request<DetailData>(`/catalog/detail/${encodeURIComponent(slug)}${id ? `?id=${id}` : ""}`),
   list: (type: "movie" | "series", page = 1) =>
-    request<{ items: CatalogItem[]; page: number; type: string }>(
+    request<{ items: CatalogItem[]; totalPages: number; page: number; type: string }>(
       `/catalog/list?t=${type}&page=${page}`
     ),
   episodes: (slug: string) =>

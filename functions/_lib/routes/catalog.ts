@@ -1,12 +1,12 @@
 import type { RouteContext } from "../env";
 import { error, json } from "../http";
-import { lk21Listing } from "../lk21/catalog";
+import { lk21ListingPage } from "../lk21/catalog";
 import { DEFAULT_LK21_BASE } from "../lk21/common";
 import { fetchDetailHtml, lk21DetailPage, lk21PostDetail } from "../lk21/detail";
 import { lk21Related } from "../lk21/recommend";
 import { lk21Search, lk21SearchSuggest } from "../lk21/search";
 import type { CatalogItem } from "../lk21/search";
-import { vaultCatalog, vaultCatalogFiltered, vaultDetail } from "../lk21/vault";
+import { getMaxId, vaultCatalog, vaultCatalogFiltered, vaultDetail } from "../lk21/vault";
 
 function base(ctx: RouteContext): string {
   return ctx.env.LK21_BASE || DEFAULT_LK21_BASE;
@@ -17,78 +17,102 @@ interface FeedOpts {
   size?: number;
 }
 
-// Ambil feed dengan rantai fallback:
-//   1) scrape listing mirror (paling lengkap, tapi diblokir dari Worker)
-//   2) search API `s=*` (JSON)
-//   3) enumerasi vault (host yang lolos dari Worker)
-async function feed(ctx: RouteContext, path: string, page: number, opts: FeedOpts = {}): Promise<CatalogItem[]> {
+interface FeedResult {
+  items: CatalogItem[];
+  totalPages: number;
+}
+
+async function estimateTotalPages(ctx: RouteContext, size: number): Promise<number> {
+  const max = await getMaxId(ctx).catch(() => 0);
+  return max > 0 ? Math.max(1, Math.ceil(max / size)) : 1;
+}
+
+// Rantai sumber katalog + total halaman:
+//   1) listing mirror (totalPages asli, mis. "1199")
+//   2) search API `s=*`
+//   3) vault
+async function feed(ctx: RouteContext, path: string, page: number, opts: FeedOpts = {}): Promise<FeedResult> {
   const size = opts.size ?? 24;
+
   try {
-    return await lk21Listing(path, base(ctx));
-  } catch (listingError) {
-    try {
-      const pages = opts.sortByRating ? [1, 2, 3] : [page];
-      const all: CatalogItem[] = [];
-      for (const p of pages) {
-        const res = await lk21Search("*", p);
-        all.push(...res.items);
-      }
-      if (all.length) {
-        if (opts.sortByRating) all.sort((a, b) => (b.rating || 0) - (a.rating || 0));
-        return all.slice(0, size);
-      }
-    } catch {
-      /* lanjut ke vault */
+    const { items, totalPages } = await lk21ListingPage(path, base(ctx));
+    if (items.length) {
+      return { items, totalPages: totalPages ?? (await estimateTotalPages(ctx, size)) };
     }
+  } catch {
+    /* lanjut */
+  }
 
-    try {
-      let items: CatalogItem[];
-      if (opts.sortByRating) {
-        const [a, b] = await Promise.all([
-          vaultCatalog(ctx, page, size),
-          vaultCatalog(ctx, page + 1, size).catch(() => [] as CatalogItem[]),
-        ]);
-        items = a.concat(b).sort((x, y) => (y.rating || 0) - (x.rating || 0)).slice(0, size);
-      } else {
-        items = await vaultCatalog(ctx, page, size);
-      }
-      if (items.length) return items;
-    } catch {
-      /* tidak ada sumber */
+  try {
+    const pages = opts.sortByRating ? [1, 2, 3] : [page];
+    const all: CatalogItem[] = [];
+    let tp = 0;
+    for (const p of pages) {
+      const res = await lk21Search("*", p);
+      all.push(...res.items);
+      tp = Math.max(tp, res.totalPages || 0);
     }
+    if (all.length) {
+      if (opts.sortByRating) all.sort((a, b) => (b.rating || 0) - (a.rating || 0));
+      return { items: all.slice(0, size), totalPages: tp || (await estimateTotalPages(ctx, size)) };
+    }
+  } catch {
+    /* lanjut */
+  }
 
-    throw listingError;
+  try {
+    let items: CatalogItem[];
+    if (opts.sortByRating) {
+      const [a, b] = await Promise.all([
+        vaultCatalog(ctx, page, size),
+        vaultCatalog(ctx, page + 1, size).catch(() => [] as CatalogItem[]),
+      ]);
+      items = a.concat(b).sort((x, y) => (y.rating || 0) - (x.rating || 0)).slice(0, size);
+    } else {
+      items = await vaultCatalog(ctx, page, size);
+    }
+    return { items, totalPages: await estimateTotalPages(ctx, size) };
+  } catch {
+    return { items: [], totalPages: 1 };
   }
 }
 
 export async function trending(ctx: RouteContext): Promise<Response> {
-  const items = await feed(ctx, "/populer/page/1", 1);
-  return json({ items });
+  const { items, totalPages } = await feed(ctx, "/populer/page/1", 1);
+  return json({ items, totalPages, page: 1, type: "popular" });
+}
+
+export async function popular(ctx: RouteContext): Promise<Response> {
+  const page = Number(ctx.url.searchParams.get("page") || "1") || 1;
+  const { items, totalPages } = await feed(ctx, `/populer/page/${page}`, page);
+  return json({ items, totalPages, page });
 }
 
 export async function top(ctx: RouteContext): Promise<Response> {
-  const items = await feed(ctx, "/rating/page/1", 2, { sortByRating: true });
-  return json({ items });
+  const { items, totalPages } = await feed(ctx, "/rating/page/1", 2, { sortByRating: true });
+  return json({ items, totalPages, page: 2 });
 }
 
 export async function latest(ctx: RouteContext): Promise<Response> {
   const page = Number(ctx.url.searchParams.get("page") || "1") || 1;
-  const items = await feed(ctx, `/latest/page/${page}`, page);
-  return json({ items, page });
+  const { items, totalPages } = await feed(ctx, `/latest/page/${page}`, page);
+  return json({ items, totalPages, page });
 }
 
 export async function genre(ctx: RouteContext): Promise<Response> {
   const g = ctx.url.searchParams.get("g") || "action";
   const page = Number(ctx.url.searchParams.get("page") || "1") || 1;
-  const items = await feed(ctx, `/genre/${encodeURIComponent(g)}/page/${page}`, page);
-  return json({ items, genre: g, page });
+  const { items, totalPages } = await feed(ctx, `/genre/${encodeURIComponent(g)}/page/${page}`, page);
+  return json({ items, totalPages, genre: g, page });
 }
 
 export async function list(ctx: RouteContext): Promise<Response> {
   const type = ctx.url.searchParams.get("t") === "series" ? "series" : "movie";
   const page = Number(ctx.url.searchParams.get("page") || "1") || 1;
-  const items = await vaultCatalogFiltered(ctx, page, 24, type).catch(() => [] as CatalogItem[]);
-  return json({ items, page, type });
+  const size = 24;
+  const items = await vaultCatalogFiltered(ctx, page, size, type).catch(() => [] as CatalogItem[]);
+  const totalPages = await estimateTotalPages(ctx, size);
+  return json({ items, totalPages, page, type });
 }
 
 export async function episodes(ctx: RouteContext): Promise<Response> {
@@ -121,7 +145,7 @@ async function searchViaListing(ctx: RouteContext, q: string): Promise<CatalogIt
   const seen = new Set<string>();
   for (const p of [1, 2, 3, 4, 5]) {
     try {
-      const items = await lk21Listing(`/latest/page/${p}`, base(ctx));
+      const items = (await lk21ListingPage(`/latest/page/${p}`, base(ctx))).items;
       for (const it of items) {
         if (it.title.toLowerCase().includes(needle) && !seen.has(it.slug)) {
           seen.add(it.slug);
@@ -174,7 +198,6 @@ export async function suggest(ctx: RouteContext): Promise<Response> {
   const q = (ctx.url.searchParams.get("q") || "").trim();
   if (!q) return json({ items: [] });
 
-  // 1) Search-suggest resmi (butuh relay aktif)
   try {
     const items = await lk21SearchSuggest(q);
     if (items.length) return json({ items: items.slice(0, 10) });
@@ -182,7 +205,6 @@ export async function suggest(ctx: RouteContext): Promise<Response> {
     /* lanjut fallback */
   }
 
-  // 2) Fallback: filter dari beberapa halaman vault (tanpa relay)
   const needle = q.toLowerCase();
   const out: { title: string; slug: string; type: string | null }[] = [];
   const seen = new Set<string>();

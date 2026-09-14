@@ -36,11 +36,10 @@ function FilmIcon() {
   );
 }
 
-function ClockIcon() {
+function FireIcon() {
   return (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <circle cx="12" cy="12" r="9" />
-      <path d="M12 7v5l3 2" />
+      <path d="M12 3c1.5 3 4 4.5 4 8a4 4 0 01-8 0c0-1 .5-2 1-3-2 1.5-4 3.5-4 6a7 7 0 0014 0c0-4-3-6-7-11z" />
     </svg>
   );
 }
@@ -87,17 +86,17 @@ export function Layout() {
         <NavLink to="/" end className={navClass}>
           <HomeIcon />Home
         </NavLink>
-        <NavLink to="/search" className={navClass}>
-          <SearchIcon />Cari
+        <NavLink to="/popular" className={navClass}>
+          <FireIcon />Populer
         </NavLink>
         <NavLink to="/discover" className={navClass}>
           <FilmIcon />Genre
         </NavLink>
+        <NavLink to="/search" className={navClass}>
+          <SearchIcon />Cari
+        </NavLink>
         <NavLink to="/watchlist" className={navClass}>
           <HeartIcon />Watchlist
-        </NavLink>
-        <NavLink to="/history" className={navClass}>
-          <ClockIcon />Riwayat
         </NavLink>
       </nav>
 
@@ -125,6 +124,7 @@ export function Layout() {
         <div className="flex-1 overflow-y-auto p-2.5 space-y-1">
           {[
             { to: "/", label: "Home", icon: "🏠" },
+            { to: "/popular", label: "Populer", icon: "🔥" },
             { to: "/discover", label: "Genre", icon: "🎬" },
             { to: "/movies", label: "Film", icon: "🎞" },
             { to: "/series", label: "Series", icon: "📺" },

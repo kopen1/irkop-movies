@@ -8,6 +8,7 @@ import { Detail } from "./pages/Detail";
 import { Search } from "./pages/Search";
 import { Discover } from "./pages/Discover";
 import { Catalog } from "./pages/Catalog";
+import { Popular } from "./pages/Popular";
 import { Watchlist } from "./pages/Watchlist";
 import { History } from "./pages/History";
 import { NotFound } from "./pages/NotFound";
@@ -32,6 +33,7 @@ export default function App() {
         <Route path="detail/:slug" element={<Detail />} />
         <Route path="search" element={<Search />} />
         <Route path="discover" element={<Discover />} />
+        <Route path="popular" element={<Popular />} />
         <Route path="movies" element={<Catalog type="movie" title="🎬 Film" />} />
         <Route path="series" element={<Catalog type="series" title="📺 Series" />} />
         <Route path="watchlist" element={<Watchlist />} />

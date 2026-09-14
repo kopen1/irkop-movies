@@ -8,6 +8,7 @@ import { PosterCard } from "../components/PosterCard";
 import { Rail } from "../components/Rail";
 import { Spinner } from "../components/Spinner";
 import { GridSkeleton } from "../components/Skeleton";
+import { Pagination } from "../components/Pagination";
 
 export function Home() {
   const { data, loading, error } = useAsync(() => Promise.all([api.trending(), api.top()]), []);
@@ -91,7 +92,6 @@ export function Home() {
       <section id="jelajah" className="pb-8">
         <div className="flex items-center px-4 pb-3">
           <h3 className="text-base font-bold">🎬 Jelajahi Film</h3>
-          <span className="ml-auto text-xs text-muted">Hal. {page}</span>
         </div>
 
         {latestQuery.loading ? (
@@ -104,28 +104,12 @@ export function Home() {
           </div>
         )}
 
-        <div className="flex justify-center gap-3 mt-5">
-          <button
-            disabled={page <= 1}
-            onClick={() => {
-              setPage((p) => Math.max(1, p - 1));
-              document.getElementById("jelajah")?.scrollIntoView({ behavior: "smooth", block: "start" });
-            }}
-            className="px-4 py-2 rounded-lg bg-surface border border-line text-sm disabled:opacity-40"
-          >
-            ← Prev
-          </button>
-          <span className="px-3 py-2 text-sm">Hal. {page}</span>
-          <button
-            onClick={() => {
-              setPage((p) => p + 1);
-              document.getElementById("jelajah")?.scrollIntoView({ behavior: "smooth", block: "start" });
-            }}
-            className="px-4 py-2 rounded-lg bg-surface border border-line text-sm"
-          >
-            Next →
-          </button>
-        </div>
+        <Pagination
+          page={page}
+          totalPages={latestQuery.data?.totalPages}
+          onPage={setPage}
+          scrollToId="jelajah"
+        />
       </section>
     </div>
   );

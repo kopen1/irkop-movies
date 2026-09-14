@@ -26,6 +26,7 @@ const ROUTES: RouteDef[] = [
   { method: "POST", path: "auth/logout", handler: auth.logout },
 
   { method: "GET", path: "catalog/trending", handler: catalog.trending },
+  { method: "GET", path: "catalog/popular", handler: catalog.popular },
   { method: "GET", path: "catalog/top", handler: catalog.top },
   { method: "GET", path: "catalog/latest", handler: catalog.latest },
   { method: "GET", path: "catalog/genre", handler: catalog.genre },

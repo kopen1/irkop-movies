@@ -1,12 +1,29 @@
 import { decodeEntities, DEFAULT_LK21_BASE, ufetch, upstreamHeaders } from "./common";
 import type { CatalogItem } from "./search";
 
-export async function lk21Listing(path: string, base = DEFAULT_LK21_BASE): Promise<CatalogItem[]> {
+export interface ListingResult {
+  items: CatalogItem[];
+  totalPages: number | null;
+}
+
+// Baca "Halaman X dari Y total halaman" dari halaman listing LK21.
+export function parseTotalPages(html: string): number | null {
+  const m = html.match(/dari\s+([\d.]+)\s+total\s+halaman/i) || html.match(/total\s+halaman[^0-9]*([\d.]+)/i);
+  if (!m) return null;
+  const n = Number(m[1].replace(/\./g, ""));
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
+
+export async function lk21ListingPage(path: string, base = DEFAULT_LK21_BASE): Promise<ListingResult> {
   const url = base + path;
   const res = await ufetch(url, { headers: upstreamHeaders(`${base}/`, { Accept: "text/html,application/xhtml+xml" }) });
   if (!res.ok) throw new Error(`listing upstream ${res.status}`);
   const html = await res.text();
-  return parseListing(html);
+  return { items: parseListing(html), totalPages: parseTotalPages(html) };
+}
+
+export async function lk21Listing(path: string, base = DEFAULT_LK21_BASE): Promise<CatalogItem[]> {
+  return (await lk21ListingPage(path, base)).items;
 }
 
 export function parseListing(html: string): CatalogItem[] {

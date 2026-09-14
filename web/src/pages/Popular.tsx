@@ -5,15 +5,15 @@ import { PosterCard } from "../components/PosterCard";
 import { GridSkeleton } from "../components/Skeleton";
 import { Pagination } from "../components/Pagination";
 
-export function Catalog({ type, title }: { type: "movie" | "series"; title: string }) {
+export function Popular() {
   const [page, setPage] = useState(1);
-  const { data, loading } = useAsync(() => api.list(type, page), [type, page]);
+  const { data, loading } = useAsync(() => api.popular(page), [page]);
   const items = data?.items ?? [];
 
   return (
     <div className="pt-4">
       <div className="px-4 pb-3">
-        <h1 className="text-xl font-extrabold">{title}</h1>
+        <h1 className="text-xl font-extrabold">🔥 Populer</h1>
       </div>
 
       {loading ? (
