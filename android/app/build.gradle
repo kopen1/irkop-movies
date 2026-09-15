@@ -30,9 +30,9 @@ android {
         release {
             if (releaseStore != null) {
                 storeFile file(releaseStore)
-                storePassword System.getenv("RELEASE_STORE_PASSWORD")
-                keyAlias System.getenv("RELEASE_KEY_ALIAS")
-                keyPassword System.getenv("RELEASE_KEY_PASSWORD")
+                storePassword (System.getenv("RELEASE_STORE_PASSWORD") ?: "").trim()
+                keyAlias (System.getenv("RELEASE_KEY_ALIAS") ?: "").trim()
+                keyPassword (System.getenv("RELEASE_KEY_PASSWORD") ?: "").trim()
             }
         }
     }

@@ -56,10 +56,18 @@ jobs:
         if: steps.check.outputs.signed == 'true'
         env:
           RELEASE_STORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          RELEASE_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
         run: |
-          keytool -list -keystore android/app/nontongo.keystore -storepass "$RELEASE_STORE_PASSWORD" > /dev/null \
-            && echo "Keystore valid." \
-            || { echo "::error::Keystore tidak bisa dibuka. Cek ANDROID_KEYSTORE_PASSWORD / isi base64."; exit 1; }
+          PASS=$(printf '%s' "$RELEASE_STORE_PASSWORD")
+          ALIAS=$(printf '%s' "$RELEASE_KEY_ALIAS")
+          echo "Alias yang dipakai: '$ALIAS'"
+          keytool -list -keystore android/app/nontongo.keystore -storepass "$PASS" -alias "$ALIAS" 2>/tmp/kt.err && echo "Keystore valid." || {
+            echo "----- pesan keytool -----"
+            cat /tmp/kt.err
+            echo "-------------------------"
+            echo "::error::Keystore gagal dibuka. Kemungkinan: (a) ANDROID_KEYSTORE_BASE64 bukan isi keystore.b64 yang benar, atau (b) ANDROID_KEYSTORE_PASSWORD tidak sama dengan password saat generate, atau (c) alias salah."
+            exit 1
+          }
 
       - name: Build signed release APK
         if: steps.check.outputs.signed == 'true'
