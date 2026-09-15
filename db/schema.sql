@@ -138,6 +138,13 @@ CREATE TABLE IF NOT EXISTS titles (
 );
 CREATE INDEX IF NOT EXISTS idx_titles_lc ON titles(title_lc);
 
+-- Cache sinopsis per judul (diisi saat relay aktif) agar sinopsis tetap ada tanpa relay.
+CREATE TABLE IF NOT EXISTS title_overviews (
+  slug       TEXT PRIMARY KEY,
+  overview   TEXT NOT NULL,
+  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
 -- Statistik kunjungan (tanpa menyimpan IP mentah; disimpan sbg hash).
 CREATE TABLE IF NOT EXISTS visits (
   id         INTEGER PRIMARY KEY AUTOINCREMENT,

@@ -99,6 +99,32 @@ export async function searchTitles(
   }
 }
 
+export async function saveOverview(ctx: RouteContext, slug: string, overview: string): Promise<void> {
+  const text = (overview || "").trim();
+  if (!slug || text.length < 20) return;
+  try {
+    await ctx.env.DB.prepare(
+      `INSERT INTO title_overviews (slug, overview, updated_at) VALUES (?, ?, datetime('now'))
+       ON CONFLICT(slug) DO UPDATE SET overview = excluded.overview, updated_at = datetime('now')`
+    )
+      .bind(slug, text)
+      .run();
+  } catch {
+    /* abaikan */
+  }
+}
+
+export async function getOverview(ctx: RouteContext, slug: string): Promise<string> {
+  try {
+    const row = await ctx.env.DB.prepare("SELECT overview FROM title_overviews WHERE slug = ?")
+      .bind(slug)
+      .first<{ overview: string }>();
+    return row?.overview ?? "";
+  } catch {
+    return "";
+  }
+}
+
 export async function countTitles(ctx: RouteContext): Promise<number> {
   try {
     const row = await ctx.env.DB.prepare("SELECT COUNT(*) AS n FROM titles").first<{ n: number }>();

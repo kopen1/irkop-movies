@@ -145,7 +145,7 @@ export function Detail() {
       <div className="relative">
         <div className="relative h-[clamp(200px,54vw,260px)] overflow-hidden">
           {view.poster ? (
-            <img src={view.poster} alt="" className="w-full h-full object-cover scale-110 blur-[2px] opacity-60" />
+            <img src={view.poster} alt="" referrerPolicy="no-referrer" className="w-full h-full object-cover scale-110 blur-[2px] opacity-60" />
           ) : (
             <div className="w-full h-full bg-gradient-to-br from-surface2 to-app" />
           )}
@@ -192,7 +192,7 @@ export function Detail() {
         <div className="px-4 -mt-16 flex items-end gap-3">
           <div className="w-[92px] shrink-0 aspect-[2/3] rounded-xl overflow-hidden border border-line shadow-2xl bg-surface2">
             {view.poster ? (
-              <img src={view.poster} alt={view.title} className="w-full h-full object-cover" />
+              <img src={view.poster} alt={view.title} referrerPolicy="no-referrer" className="w-full h-full object-cover" />
             ) : (
               <div className="grid place-items-center h-full text-xl font-extrabold text-white/30">{initials}</div>
             )}

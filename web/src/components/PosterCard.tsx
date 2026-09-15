@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import type { CatalogItem } from "../types";
 
@@ -11,14 +12,19 @@ function initials(title: string): string {
 }
 
 export function PosterCard({ item }: { item: CatalogItem }) {
+  const [broken, setBroken] = useState(false);
+  const showImg = Boolean(item.poster) && !broken;
+
   return (
     <Link to={`/detail/${encodeURIComponent(item.slug)}`} state={{ item }} className="block group">
-      <div className="relative aspect-[2/3] rounded-2xl overflow-hidden bg-surface2 shadow-lg">
-        {item.poster ? (
+      <div className="relative aspect-[2/3] rounded-2xl overflow-hidden bg-gradient-to-br from-surface2 to-[#1d2536] shadow-lg">
+        {showImg ? (
           <img
-            src={item.poster}
+            src={item.poster as string}
             alt={item.title}
             loading="lazy"
+            referrerPolicy="no-referrer"
+            onError={() => setBroken(true)}
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
           />
         ) : (

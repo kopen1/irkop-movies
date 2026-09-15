@@ -8,7 +8,7 @@ import { lk21Related } from "../lk21/recommend";
 import { lk21Search, lk21SearchSuggest } from "../lk21/search";
 import type { CatalogItem } from "../lk21/search";
 import { getMaxId, vaultCatalog, vaultCatalogFiltered, vaultDetail } from "../lk21/vault";
-import { getTitleBySlug, searchTitles, suggestTitles, upsertTitles } from "../lk21/titles";
+import { getOverview, getTitleBySlug, saveOverview, searchTitles, suggestTitles, upsertTitles } from "../lk21/titles";
 
 function base(ctx: RouteContext): string {
   return ctx.env.LK21_BASE || DEFAULT_LK21_BASE;
@@ -290,59 +290,40 @@ export async function detail(ctx: RouteContext): Promise<Response> {
   if (!slug) return error("slug wajib", 400);
   const id = Number(ctx.url.searchParams.get("id"));
 
-  if (Number.isFinite(id) && id > 0) {
-    const item = await vaultDetail(id).catch(() => null);
-    if (item) {
-      return json({
-        slug: item.slug || slug,
-        title: item.title,
-        year: item.year ?? null,
-        overview: "",
-        poster: item.poster ?? null,
-        postId: id,
-        type: item.type ?? null,
-        runtime: item.runtime ?? null,
-        rating: item.rating ?? null,
-        url: "",
-      });
-    }
-  }
+  // Metadata dasar: id → vault, atau indeks D1 (cepat, tanpa relay).
+  const baseItem = Number.isFinite(id) && id > 0 ? await vaultDetail(id).catch(() => null) : null;
+  const local = baseItem ? null : await getTitleBySlug(ctx, slug).catch(() => null);
 
-  // Fallback cepat dari indeks D1 (tanpa relay).
-  const local = await getTitleBySlug(ctx, slug).catch(() => null);
+  const result = {
+    slug: baseItem?.slug || local?.slug || slug,
+    title: baseItem?.title || local?.title || slug,
+    year: baseItem?.year ?? local?.year ?? null,
+    overview: await getOverview(ctx, slug),
+    poster: baseItem?.poster ?? local?.poster ?? null,
+    postId: Number.isFinite(id) && id > 0 ? id : (local?.post_id ?? null),
+    type: baseItem?.type ?? local?.type ?? null,
+    runtime: baseItem?.runtime ?? null,
+    rating: baseItem?.rating ?? null,
+    url: "",
+  };
 
+  // Lengkapi dari halaman detail (sinopsis, dll). Butuh relay bila diblokir.
   try {
     const data = await lk21DetailPage(slug, base(ctx));
-    let post: Awaited<ReturnType<typeof lk21PostDetail>>[number] | null = null;
-    if (data.postId) {
-      post = (await lk21PostDetail([data.postId]))[0] || null;
+    if (data.postId && !result.postId) result.postId = data.postId;
+    if (data.title && (!result.title || result.title === slug)) result.title = data.title;
+    if (!result.year && data.year) result.year = data.year;
+    if (!result.poster && data.poster) result.poster = data.poster;
+    if (data.type && !result.type) result.type = data.type;
+    if (data.overview) {
+      result.overview = data.overview;
+      ctx.waitUntil(saveOverview(ctx, slug, data.overview).catch(() => {}));
     }
-    return json({
-      slug: data.slug,
-      title: post?.title || data.title,
-      year: post?.year ? String(post.year) : data.year,
-      overview: data.overview,
-      poster: post?.poster || data.poster,
-      postId: data.postId,
-      type: data.type,
-      runtime: post?.runtime ?? null,
-      rating: post?.rating != null ? Number(post.rating) : null,
-      url: data.url,
-    });
   } catch {
-    return json({
-      slug,
-      title: local?.title || slug,
-      year: local?.year ?? null,
-      overview: "",
-      poster: local?.poster ?? null,
-      postId: local?.post_id ?? null,
-      type: local?.type ?? null,
-      runtime: null,
-      rating: null,
-      url: "",
-    });
+    /* tanpa relay: pakai data vault/indeks */
   }
+
+  return json(result);
 }
 
 export async function related(ctx: RouteContext): Promise<Response> {

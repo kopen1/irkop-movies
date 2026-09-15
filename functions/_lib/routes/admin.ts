@@ -1,11 +1,11 @@
 import type { RouteContext } from "../env";
 import { error, json } from "../http";
 import { DEFAULT_LK21_BASE } from "../lk21/common";
-import { fetchDetailHtml } from "../lk21/detail";
+import { fetchDetailHtml, parseOverview } from "../lk21/detail";
 import { parseAllServers, resolveFirstServer, resolveStream } from "../lk21/stream";
 import { deleteStreamMap, getStreamMap, saveServers, saveStreamMap } from "../lk21/streamMap";
 import { vaultCatalog } from "../lk21/vault";
-import { countTitles, upsertTitles } from "../lk21/titles";
+import { countTitles, saveOverview, upsertTitles } from "../lk21/titles";
 
 function ensureAdmin(ctx: RouteContext): Response | null {
   if (!ctx.user) return error("Perlu login", 401);
@@ -232,6 +232,7 @@ export async function streamMapBuild(ctx: RouteContext): Promise<Response> {
       } else {
         failed++;
       }
+      await saveOverview(ctx, slug, parseOverview(html)).catch(() => {});
     } catch {
       failed++;
     }
@@ -301,6 +302,7 @@ export async function streamMapBuildStream(ctx: RouteContext): Promise<Response>
           const { html, url } = await fetchDetailHtml(slug, base);
           const refs = parseAllServers(html);
           const found = await resolveFirstServer(html, url);
+          await saveOverview(ctx, slug, parseOverview(html)).catch(() => {});
           if (found) {
             await saveStreamMap(ctx, slug, found.ref.origin, found.ref.host, found.ref.id);
             await saveServers(ctx, slug, refs);

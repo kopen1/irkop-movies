@@ -17,6 +17,20 @@ function firstMatch(html: string, re: RegExp): string | null {
   return m ? m[1] : null;
 }
 
+// Ambil sinopsis dari HTML halaman detail (untuk dicache tanpa fetch ulang).
+export function parseOverview(html: string, title = ""): string {
+  const raw =
+    firstMatch(html, /class="synopsis[^"]*"[^>]*>([\s\S]*?)<\/div>/) ||
+    firstMatch(html, /<meta name="description" content="([^"]+)"/) ||
+    "";
+  let overview = decodeEntities(raw.replace(/<[^>]+>/g, " "));
+  if (title) {
+    const esc = title.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    overview = overview.replace(new RegExp("^" + esc + "\\s*-\\s*"), "");
+  }
+  return overview;
+}
+
 export function extractServers(html: string): string[] {
   const found: string[] = [];
   for (const m of html.matchAll(/<iframe[^>]+src="([^"]+)"/g)) {
