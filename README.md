@@ -274,6 +274,20 @@ npm run dev                        # frontend :5173 (proxy /api → 8788)
 
 ---
 
+## Android (native Java)
+
+Folder `android/` berisi aplikasi Android **native** (bukan WebView) yang memakai API yang sama
+(Retrofit + Glide + ExoPlayer HLS). Fitur: Home, Populer, Genre, Cari (autocomplete), Film/Series/
+Tahun/Negara, Detail (sinopsis + episode per-season + rekomendasi), Player (pilih server, auto-next),
+Watchlist & Riwayat lokal, top bar + hamburger (drawer).
+
+Build APK:
+- **GitHub Actions**: Actions → **Android APK** → Run workflow (artifact `nontongo-apk`).
+- **Android Studio**: buka folder `android/`.
+- Detail lengkap & cara signing (agar bisa update tanpa uninstall): lihat `android/README.md`.
+
+---
+
 ## Catatan platform
 
 - `wrangler` ada di **optionalDependencies** (binary `workerd` tidak mendukung Android/Termux).

@@ -27,10 +27,6 @@
             android:configChanges="orientation|screenSize|keyboardHidden" />
 
         <activity
-            android:name=".DetailActivity"
-            android:configChanges="orientation|screenSize|keyboardHidden" />
-
-        <activity
             android:name=".PlayerActivity"
             android:configChanges="orientation|screenSize|keyboardHidden|screenLayout|smallestScreenSize" />
 

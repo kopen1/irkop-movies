@@ -16,8 +16,11 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.media3.common.MediaItem;
+import androidx.media3.common.MimeTypes;
 import androidx.media3.common.Player;
+import androidx.media3.datasource.DefaultDataSource;
 import androidx.media3.exoplayer.ExoPlayer;
+import androidx.media3.exoplayer.hls.HlsMediaSource;
 import androidx.media3.ui.PlayerView;
 
 import com.nontongo.app.model.Episode;
@@ -116,7 +119,13 @@ public class PlayerActivity extends AppCompatActivity {
                 setupServers(body);
                 if (body.proxy != null) {
                     String url = ApiClient.baseUrl().replaceAll("/$", "") + body.proxy;
-                    player.setMediaItem(MediaItem.fromUri(url));
+                    MediaItem item = new MediaItem.Builder()
+                            .setUri(url)
+                            .setMimeType(MimeTypes.APPLICATION_M3U8)
+                            .build();
+                    HlsMediaSource source = new HlsMediaSource.Factory(new DefaultDataSource.Factory(PlayerActivity.this))
+                            .createMediaSource(item);
+                    player.setMediaSource(source);
                     player.prepare();
                     player.play();
                 } else if (body.fallbackUrl != null) {

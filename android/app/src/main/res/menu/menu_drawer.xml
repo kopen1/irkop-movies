@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <group android:checkableBehavior="single">
+        <item android:id="@+id/drawer_home" android:title="@string/home" />
+        <item android:id="@+id/drawer_popular" android:title="@string/popular" />
+        <item android:id="@+id/drawer_genre" android:title="@string/genre" />
+        <item android:id="@+id/drawer_movies" android:title="@string/movies" />
+        <item android:id="@+id/drawer_series" android:title="@string/series" />
+        <item android:id="@+id/drawer_year" android:title="@string/year" />
+        <item android:id="@+id/drawer_country" android:title="@string/country" />
+    </group>
+    <item android:title="">
+        <menu>
+            <item android:id="@+id/drawer_watchlist" android:title="@string/watchlist" />
+            <item android:id="@+id/drawer_history" android:title="@string/history" />
+        </menu>
+    </item>
+</menu>

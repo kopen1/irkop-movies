@@ -53,21 +53,29 @@
 
         <Button
             android:id="@+id/btn_prev"
+            style="@style/Widget.NontonGo.Button"
             android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
+            android:layout_height="40dp"
+            android:maxLines="1"
+            android:singleLine="true"
             android:text="@string/prev" />
 
         <TextView
             android:id="@+id/page_text"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:paddingHorizontal="12dp"
-            android:textColor="@color/muted" />
+            android:layout_marginHorizontal="12dp"
+            android:maxLines="1"
+            android:textColor="@color/muted"
+            android:textSize="12sp" />
 
         <Button
             android:id="@+id/btn_next"
+            style="@style/Widget.NontonGo.Button"
             android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
+            android:layout_height="40dp"
+            android:maxLines="1"
+            android:singleLine="true"
             android:text="@string/next" />
     </LinearLayout>
 </LinearLayout>

@@ -44,9 +44,36 @@ Workflow `.github/workflows/android.yml` otomatis build APK saat folder `android
 `nontongo-debug-apk`.
 
 ## Catatan
-- Pemutar memakai `/api/stream/play` dari API. Bila server pertama bermasalah, gunakan
-  dropdown server (p2p/turbovip/cast/hydrax). Bila stream belum tersedia (belum di-mapping &
-  relay mati), app membuka mirror di browser.
+- Tampilan mengikuti website: **top bar + hamburger (drawer)** dan **bottom nav** yang tetap
+  tampil juga saat membuka detail (detail = fragment, bukan activity terpisah).
+- Pemutar memakai **ExoPlayer HLS** dengan proxy `/api/stream/play`. Bila server pertama
+  bermasalah, gunakan dropdown server (p2p/turbovip/cast/hydrax). Bila stream belum tersedia
+  (belum di-mapping & relay mati), app membuka mirror di browser.
 - Watchlist & riwayat disimpan **di perangkat**, tanpa login.
 - Tidak ada Gradle Wrapper di repo ini; untuk CLI gunakan `gradle` (atau jalankan
   `gradle wrapper` sekali untuk membuat `gradlew`).
+
+## Update tanpa uninstall (signing)
+Android hanya mengizinkan update bila APK baru ditandatangani dengan **kunci yang sama** dan
+`versionCode` lebih besar. Workflow sudah otomatis menaikkan `versionCode` dari nomor build GitHub.
+
+Agar dapat update tanpa uninstall:
+1. Buat keystore sekali (di PC):
+   ```bash
+   keytool -genkeypair -v -keystore nontongo.keystore -alias nontongo \
+     -keyalg RSA -keysize 2048 -validity 10000
+   ```
+2. Encode base64:
+   ```bash
+   base64 -w0 nontongo.keystore > keystore.b64
+   ```
+3. Tambahkan **GitHub → Settings → Secrets and variables → Actions**:
+   - `ANDROID_KEYSTORE_BASE64` = isi `keystore.b64`
+   - `ANDROID_KEYSTORE_PASSWORD` = password keystore
+   - `ANDROID_KEY_ALIAS` = `nontongo`
+   - `ANDROID_KEY_PASSWORD` = password key
+4. Jalankan workflow **Android APK** → dapat `app-release.apk` yang ditandatangani.
+   APK berikutnya (dari workflow yang sama) bisa dipasang **di atas** versi lama.
+
+> Jika secret tidak diisi, workflow membuat APK **debug** (tetap bisa dipakai untuk tes, tapi
+> update antar-build bisa minta uninstall karena kunci debug berubah).

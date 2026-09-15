@@ -1,9 +1,11 @@
-package com.nontongo.app;
+package com.nontongo.app.fragment;
 
 import android.content.Intent;
 import android.graphics.drawable.ColorDrawable;
 import android.os.Bundle;
+import android.view.LayoutInflater;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
@@ -12,11 +14,14 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
-import androidx.appcompat.app.AppCompatActivity;
+import androidx.annotation.Nullable;
+import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.bumptech.glide.Glide;
+import com.nontongo.app.Library;
+import com.nontongo.app.R;
 import com.nontongo.app.adapter.EpisodeAdapter;
 import com.nontongo.app.adapter.PosterAdapter;
 import com.nontongo.app.model.CatalogItem;
@@ -36,7 +41,7 @@ import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
 
-public class DetailActivity extends AppCompatActivity {
+public class DetailFragment extends Fragment {
 
     private ImageView poster;
     private TextView title, meta, synopsis, epHeader, relatedHeader;
@@ -54,45 +59,60 @@ public class DetailActivity extends AppCompatActivity {
     private EpisodeAdapter episodeAdapter;
     private PosterAdapter relatedAdapter;
 
+    public static DetailFragment newInstance(String slug, int id, String title, String poster, String type, String year) {
+        DetailFragment f = new DetailFragment();
+        Bundle b = new Bundle();
+        b.putString("slug", slug);
+        b.putInt("id", id);
+        b.putString("title", title);
+        b.putString("poster", poster);
+        b.putString("type", type);
+        b.putString("year", year);
+        f.setArguments(b);
+        return f;
+    }
+
+    @Nullable
     @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_detail);
+    public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup parent, @Nullable Bundle savedInstanceState) {
+        return inflater.inflate(R.layout.activity_detail, parent, false);
+    }
 
-        poster = findViewById(R.id.d_poster);
-        title = findViewById(R.id.d_title);
-        meta = findViewById(R.id.d_meta);
-        synopsis = findViewById(R.id.d_synopsis);
-        epHeader = findViewById(R.id.d_ep_header);
-        relatedHeader = findViewById(R.id.d_related_header);
-        seasonsWrap = findViewById(R.id.d_seasons_wrap);
-        seasons = findViewById(R.id.d_seasons);
-        episodesView = findViewById(R.id.d_episodes);
-        relatedView = findViewById(R.id.d_related);
-        progress = findViewById(R.id.d_progress);
+    @Override
+    public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
+        poster = view.findViewById(R.id.d_poster);
+        title = view.findViewById(R.id.d_title);
+        meta = view.findViewById(R.id.d_meta);
+        synopsis = view.findViewById(R.id.d_synopsis);
+        epHeader = view.findViewById(R.id.d_ep_header);
+        relatedHeader = view.findViewById(R.id.d_related_header);
+        seasonsWrap = view.findViewById(R.id.d_seasons_wrap);
+        seasons = view.findViewById(R.id.d_seasons);
+        episodesView = view.findViewById(R.id.d_episodes);
+        relatedView = view.findViewById(R.id.d_related);
+        progress = view.findViewById(R.id.d_progress);
 
-        slug = getIntent().getStringExtra("slug");
-        id = getIntent().getIntExtra("id", -1);
-        type = getIntent().getStringExtra("type");
-        String titleExtra = getIntent().getStringExtra("title");
-        String posterExtra = getIntent().getStringExtra("poster");
-        String yearExtra = getIntent().getStringExtra("year");
-
-        title.setText(titleExtra != null ? titleExtra : slug);
-        meta.setText(yearExtra != null ? yearExtra : "");
-        Glide.with(this).load(posterExtra).placeholder(new ColorDrawable(0xFF2F3A52)).into(poster);
+        Bundle a = getArguments();
+        if (a != null) {
+            slug = a.getString("slug");
+            id = a.getInt("id", -1);
+            type = a.getString("type");
+            title.setText(a.getString("title", slug));
+            meta.setText(a.getString("year", ""));
+            Glide.with(this).load(a.getString("poster")).placeholder(new ColorDrawable(0xFF2F3A52)).into(poster);
+        }
 
         episodeAdapter = new EpisodeAdapter(this::playEpisode);
-        episodesView.setLayoutManager(new GridLayoutManager(this, 4));
+        episodesView.setLayoutManager(new GridLayoutManager(requireContext(), 4));
         episodesView.setAdapter(episodeAdapter);
 
-        relatedAdapter = new PosterAdapter(false, item -> Ui.openDetail(this, item));
-        relatedView.setLayoutManager(new GridLayoutManager(this, 2));
+        relatedAdapter = new PosterAdapter(false, item -> Ui.openDetail(requireContext(), item));
+        relatedView.setLayoutManager(new GridLayoutManager(requireContext(), 2));
         relatedView.setAdapter(relatedAdapter);
 
-        findViewById(R.id.d_play).setOnClickListener(v -> playCurrent());
-        findViewById(R.id.d_watch).setOnClickListener(v -> toggleWatch());
-        findViewById(R.id.d_share).setOnClickListener(v -> share());
+        view.findViewById(R.id.d_play).setOnClickListener(v -> playCurrent());
+        view.findViewById(R.id.d_watch).setOnClickListener(v -> toggleWatch());
+        view.findViewById(R.id.d_share).setOnClickListener(v -> share());
 
         loadDetail();
     }
@@ -104,11 +124,11 @@ public class DetailActivity extends AppCompatActivity {
             public void onResponse(@NonNull Call<DetailData> call, @NonNull Response<DetailData> response) {
                 progress.setVisibility(View.GONE);
                 detail = response.body();
-                if (detail == null) return;
+                if (detail == null || !isAdded()) return;
 
                 title.setText(detail.title != null ? detail.title : slug);
                 type = detail.type != null ? detail.type : type;
-                Glide.with(DetailActivity.this).load(detail.poster).placeholder(new ColorDrawable(0xFF2F3A52)).into(poster);
+                Glide.with(DetailFragment.this).load(detail.poster).placeholder(new ColorDrawable(0xFF2F3A52)).into(poster);
 
                 StringBuilder m = new StringBuilder();
                 if (detail.rating != null) m.append("★ ").append(String.format(java.util.Locale.US, "%.1f", detail.rating)).append("   ");
@@ -120,9 +140,7 @@ public class DetailActivity extends AppCompatActivity {
                 synopsis.setText((detail.overview != null && !detail.overview.isEmpty())
                         ? detail.overview : getString(R.string.no_synopsis));
 
-                if ("series".equalsIgnoreCase(detail.type)) {
-                    loadEpisodes();
-                }
+                if ("series".equalsIgnoreCase(detail.type)) loadEpisodes();
                 loadRelated();
             }
 
@@ -138,7 +156,7 @@ public class DetailActivity extends AppCompatActivity {
             @Override
             public void onResponse(@NonNull Call<EpisodesResponse> call, @NonNull Response<EpisodesResponse> response) {
                 EpisodesResponse body = response.body();
-                if (body == null || body.items == null || body.items.isEmpty()) return;
+                if (body == null || body.items == null || body.items.isEmpty() || !isAdded()) return;
                 allEpisodes.clear();
                 allEpisodes.addAll(body.items);
                 epHeader.setVisibility(View.VISIBLE);
@@ -149,13 +167,12 @@ public class DetailActivity extends AppCompatActivity {
                     Integer c = bySeason.get(e.season);
                     bySeason.put(e.season, c == null ? 1 : c + 1);
                 }
-
                 Integer[] seasonKeys = bySeason.keySet().toArray(new Integer[0]);
                 if (seasonKeys.length > 1) {
                     seasonsWrap.setVisibility(View.VISIBLE);
                     seasons.removeAllViews();
                     for (Integer s : seasonKeys) {
-                        Button b = new Button(DetailActivity.this);
+                        Button b = new Button(requireContext());
                         b.setText("Season " + s);
                         b.setAllCaps(false);
                         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
@@ -203,12 +220,12 @@ public class DetailActivity extends AppCompatActivity {
         String s = detail != null ? detail.slug : slug;
         String tt = detail != null ? detail.title : title.getText().toString();
         String pp = detail != null ? detail.poster : null;
-        Ui.openPlayer(this, s, tt, pp, type);
+        Ui.openPlayer(requireContext(), s, tt, pp, type);
     }
 
     private void playEpisode(Episode episode) {
         String tt = (detail != null ? detail.title : title.getText().toString()) + " E" + episode.episode;
-        Ui.openPlayer(this, episode.slug, tt, detail != null ? detail.poster : null, "series");
+        Ui.openPlayer(requireContext(), episode.slug, tt, detail != null ? detail.poster : null, "series");
     }
 
     private void toggleWatch() {
@@ -219,11 +236,11 @@ public class DetailActivity extends AppCompatActivity {
         item.type = type;
         item.id = (detail != null && detail.postId != null) ? String.valueOf(detail.postId) : null;
 
-        if (Library.isWatched(this, item.slug)) {
-            Library.removeWatch(this, item.slug);
+        if (Library.isWatched(requireContext(), item.slug)) {
+            Library.removeWatch(requireContext(), item.slug);
             toast("Dihapus dari watchlist");
         } else {
-            Library.addWatch(this, item);
+            Library.addWatch(requireContext(), item);
             toast("Ditambahkan ke watchlist");
         }
     }
@@ -236,6 +253,6 @@ public class DetailActivity extends AppCompatActivity {
     }
 
     private void toast(String s) {
-        Toast.makeText(this, s, Toast.LENGTH_SHORT).show();
+        Toast.makeText(requireContext(), s, Toast.LENGTH_SHORT).show();
     }
 }

@@ -11,7 +11,13 @@
     <string name="episodes">Episode</string>
     <string name="synopsis">Sinopsis</string>
     <string name="no_synopsis">Belum ada sinopsis.</string>
-    <string name="prev">« Sebelumnya</string>
-    <string name="next">Berikutnya »</string>
+    <string name="prev">‹ Sebelumnya</string>
+    <string name="next">Berikutnya ›</string>
     <string name="page_info">Halaman %1$d dari %2$d</string>
+    <string name="menu">Menu</string>
+    <string name="movies">Film</string>
+    <string name="series">Series</string>
+    <string name="year">Tahun</string>
+    <string name="country">Negara</string>
+    <string name="history">Riwayat</string>
 </resources>

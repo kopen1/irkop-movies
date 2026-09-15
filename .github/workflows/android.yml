@@ -28,13 +28,46 @@ jobs:
       - name: Accept Android SDK licenses
         run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses >/dev/null 2>&1 || true
 
-      - name: Build debug APK
+      - name: Check signing secret
+        id: check
+        run: echo "signed=${{ secrets.ANDROID_KEYSTORE_BASE64 != '' }}" >> "$GITHUB_OUTPUT"
+
+      - name: Decode keystore
+        if: steps.check.outputs.signed == 'true'
+        run: echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > android/app/nontongo.keystore
+
+      - name: Build signed release APK
+        if: steps.check.outputs.signed == 'true'
         working-directory: android
+        env:
+          RELEASE_STORE_FILE: nontongo.keystore
+          RELEASE_STORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          RELEASE_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          RELEASE_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          VERSION_CODE: ${{ github.run_number }}
+          VERSION_NAME: "1.0.${{ github.run_number }}"
+        run: gradle assembleRelease --no-daemon --stacktrace
+
+      - name: Build debug APK (fallback)
+        if: steps.check.outputs.signed != 'true'
+        working-directory: android
+        env:
+          VERSION_CODE: ${{ github.run_number }}
+          VERSION_NAME: "1.0.${{ github.run_number }}"
         run: gradle assembleDebug --no-daemon --stacktrace
 
-      - name: Upload APK
+      - name: Upload release APK
+        if: steps.check.outputs.signed == 'true'
         uses: actions/upload-artifact@v4
         with:
-          name: nontongo-debug-apk
+          name: nontongo-apk
+          path: android/app/build/outputs/apk/release/app-release.apk
+          if-no-files-found: error
+
+      - name: Upload debug APK
+        if: steps.check.outputs.signed != 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: nontongo-apk-debug
           path: android/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error

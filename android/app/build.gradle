@@ -2,6 +2,10 @@ plugins {
     id 'com.android.application'
 }
 
+// Signing: bila env RELEASE_STORE_FILE diisi (mis. dari GitHub Secrets), APK release
+// ditandatangani dengan keystore tetap -> bisa update tanpa uninstall.
+def releaseStore = System.getenv("RELEASE_STORE_FILE")
+
 android {
     namespace 'com.nontongo.app'
     compileSdk 34
@@ -10,8 +14,8 @@ android {
         applicationId "com.nontongo.app"
         minSdk 26
         targetSdk 34
-        versionCode 1
-        versionName "1.0"
+        versionCode (System.getenv("VERSION_CODE") ?: "1").toInteger()
+        versionName System.getenv("VERSION_NAME") ?: "1.0"
         // Ganti BASE_URL bila domain berubah (harus diakhiri '/')
         buildConfigField "String", "BASE_URL", "\"https://irkop-movies.pages.dev/\""
     }
@@ -20,8 +24,22 @@ android {
         buildConfig true
     }
 
+    signingConfigs {
+        release {
+            if (releaseStore != null) {
+                storeFile file(releaseStore)
+                storePassword System.getenv("RELEASE_STORE_PASSWORD")
+                keyAlias System.getenv("RELEASE_KEY_ALIAS")
+                keyPassword System.getenv("RELEASE_KEY_PASSWORD")
+            }
+        }
+    }
+
     buildTypes {
         release {
+            if (releaseStore != null) {
+                signingConfig signingConfigs.release
+            }
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
