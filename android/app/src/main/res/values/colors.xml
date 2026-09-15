@@ -6,10 +6,10 @@
     <color name="line">#47546F</color>
     <color name="text">#F2F6FD</color>
     <color name="muted">#ADB8D0</color>
-    <color name="accent">#E50914</color>
-    <color name="accent2">#FF5C67</color>
+    <color name="accent">#A4161A</color>
+    <color name="accent2">#C1121F</color>
     <color name="gold">#FFC93C</color>
     <color name="black">#000000</color>
     <color name="white">#FFFFFF</color>
-    <color name="ic_launcher_background">#252E42</color>
+    <color name="ic_launcher_background">#1B2333</color>
 </resources>

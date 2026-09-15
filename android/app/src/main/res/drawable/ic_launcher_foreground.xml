@@ -3,10 +3,24 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
+
+    <!-- strip film (putih) -->
     <path
-        android:fillColor="#E50914"
-        android:pathData="M28,54 a26,26 0 1,0 52,0 a26,26 0 1,0 -52,0 z" />
+        android:fillColor="#F2F6FD"
+        android:pathData="M40,26 h28 a4,4 0 0 1 4,4 v48 a4,4 0 0 1 -4,4 h-28 a4,4 0 0 1 -4,-4 v-48 a4,4 0 0 1 4,-4 z" />
+
+    <!-- lubang strip (gelap) -->
+    <path android:fillColor="#1B2333" android:pathData="M39,32 h6 v7 h-6 z" />
+    <path android:fillColor="#1B2333" android:pathData="M39,44 h6 v7 h-6 z" />
+    <path android:fillColor="#1B2333" android:pathData="M39,56 h6 v7 h-6 z" />
+    <path android:fillColor="#1B2333" android:pathData="M39,68 h6 v7 h-6 z" />
+    <path android:fillColor="#1B2333" android:pathData="M63,32 h6 v7 h-6 z" />
+    <path android:fillColor="#1B2333" android:pathData="M63,44 h6 v7 h-6 z" />
+    <path android:fillColor="#1B2333" android:pathData="M63,56 h6 v7 h-6 z" />
+    <path android:fillColor="#1B2333" android:pathData="M63,68 h6 v7 h-6 z" />
+
+    <!-- bingkai merah lembut di tengah -->
     <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M47,40 L71,54 L47,68 Z" />
+        android:fillColor="#A4161A"
+        android:pathData="M49,44 h10 v20 h-10 z" />
 </vector>

@@ -1,6 +1,7 @@
 package com.nontongo.app;
 
 import android.content.Intent;
+import android.content.pm.ActivityInfo;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
@@ -8,6 +9,7 @@ import android.os.Looper;
 import android.view.View;
 import android.widget.ArrayAdapter;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.Spinner;
 import android.widget.TextView;
@@ -43,6 +45,8 @@ public class PlayerActivity extends AppCompatActivity {
     private ProgressBar progress;
     private Spinner serverSpinner;
     private TextView titleView;
+    private LinearLayout msgWrap;
+    private TextView msgView;
 
     private String slug;
     private String title;
@@ -50,8 +54,8 @@ public class PlayerActivity extends AppCompatActivity {
     private String type;
 
     private final List<Episode> episodes = new ArrayList<>();
-    private int serverIndex = 0;
     private boolean spinnerReady = false;
+    private boolean fullscreen = false;
 
     private final Handler handler = new Handler(Looper.getMainLooper());
     private long lastSaved = 0;
@@ -65,7 +69,10 @@ public class PlayerActivity extends AppCompatActivity {
         progress = findViewById(R.id.player_progress);
         serverSpinner = findViewById(R.id.server_spinner);
         titleView = findViewById(R.id.player_title);
+        msgWrap = findViewById(R.id.player_msg_wrap);
+        msgView = findViewById(R.id.player_msg);
         ImageView close = findViewById(R.id.btn_close);
+        ImageView fullscreenBtn = findViewById(R.id.btn_fullscreen);
 
         slug = getIntent().getStringExtra("slug");
         title = getIntent().getStringExtra("title");
@@ -74,19 +81,19 @@ public class PlayerActivity extends AppCompatActivity {
         titleView.setText(title != null ? title : slug);
 
         close.setOnClickListener(v -> finish());
+        fullscreenBtn.setOnClickListener(v -> toggleFullscreen());
 
         player = new ExoPlayer.Builder(this).build();
         playerView.setPlayer(player);
         player.addListener(new Player.Listener() {
             @Override
             public void onPlaybackStateChanged(int state) {
+                if (state == Player.STATE_READY) progress.setVisibility(View.GONE);
                 if (state == Player.STATE_ENDED) onEnded();
             }
         });
 
-        if ("series".equalsIgnoreCase(type)) {
-            loadEpisodes();
-        }
+        if ("series".equalsIgnoreCase(type)) loadEpisodes();
         loadPlay(0);
     }
 
@@ -106,14 +113,21 @@ public class PlayerActivity extends AppCompatActivity {
         });
     }
 
+    private void showMessage(String text) {
+        progress.setVisibility(View.GONE);
+        msgWrap.setVisibility(View.VISIBLE);
+        msgView.setText(text);
+    }
+
     private void loadPlay(int server) {
         progress.setVisibility(View.VISIBLE);
+        msgWrap.setVisibility(View.GONE);
         ApiClient.get().play(slug, server > 0 ? server : null).enqueue(new Callback<PlayResponse>() {
             @Override
             public void onResponse(@NonNull Call<PlayResponse> call, @NonNull Response<PlayResponse> response) {
                 PlayResponse body = response.body();
                 if (body == null) {
-                    progress.setVisibility(View.GONE);
+                    showMessage("Gagal memuat data stream.");
                     return;
                 }
                 setupServers(body);
@@ -128,20 +142,21 @@ public class PlayerActivity extends AppCompatActivity {
                     player.setMediaSource(source);
                     player.prepare();
                     player.play();
-                } else if (body.fallbackUrl != null) {
-                    progress.setVisibility(View.GONE);
-                    startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(body.fallbackUrl)));
-                    finish();
                 } else {
-                    progress.setVisibility(View.GONE);
-                    Toast.makeText(PlayerActivity.this, "Stream tidak tersedia", Toast.LENGTH_SHORT).show();
+                    showMessage("Stream belum tersedia untuk judul ini.\nCoba lagi nanti atau pilih server lain.");
+                    if (body.fallbackUrl != null) {
+                        // tombol mirror hanya opsional, tidak otomatis membuka browser
+                        final String fb = body.fallbackUrl;
+                        android.widget.Button b = msgWrap.findViewById(R.id.btn_mirror);
+                        b.setVisibility(View.VISIBLE);
+                        b.setOnClickListener(v -> startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(fb))));
+                    }
                 }
             }
 
             @Override
             public void onFailure(@NonNull Call<PlayResponse> call, @NonNull Throwable t) {
-                progress.setVisibility(View.GONE);
-                Toast.makeText(PlayerActivity.this, "Gagal memuat stream", Toast.LENGTH_SHORT).show();
+                showMessage("Gagal memuat stream.\nPeriksa koneksi lalu coba lagi.");
             }
         });
     }
@@ -169,7 +184,6 @@ public class PlayerActivity extends AppCompatActivity {
                     first = false;
                     return;
                 }
-                serverIndex = position;
                 loadPlay(position);
             }
 
@@ -185,7 +199,7 @@ public class PlayerActivity extends AppCompatActivity {
 
     private void onEnded() {
         int dur = durationSec();
-        saveHistory(dur, dur); // selesai -> keluar dari "Lanjutkan Menonton"
+        saveHistory(dur, dur);
 
         if ("series".equalsIgnoreCase(type) && !episodes.isEmpty()) {
             int idx = -1;
@@ -201,7 +215,6 @@ public class PlayerActivity extends AppCompatActivity {
                 title = (title != null ? title.split(" E")[0] : slug) + " E" + next.episode;
                 titleView.setText(title);
                 spinnerReady = false;
-                serverIndex = 0;
                 loadPlay(0);
             }
         }
@@ -233,11 +246,36 @@ public class PlayerActivity extends AppCompatActivity {
         }
     };
 
+    private void toggleFullscreen() {
+        fullscreen = !fullscreen;
+        if (fullscreen) {
+            setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
+            hideSystemUi();
+        } else {
+            setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED);
+            showSystemUi();
+        }
+    }
+
+    private void hideSystemUi() {
+        View decor = getWindow().getDecorView();
+        decor.setSystemUiVisibility(View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+                | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+                | View.SYSTEM_UI_FLAG_FULLSCREEN
+                | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY);
+    }
+
+    private void showSystemUi() {
+        View decor = getWindow().getDecorView();
+        decor.setSystemUiVisibility(View.SYSTEM_UI_FLAG_LAYOUT_STABLE);
+    }
+
     @Override
     protected void onStart() {
         super.onStart();
         handler.postDelayed(ticker, 5000);
-        hideSystemUi();
     }
 
     @Override
@@ -260,14 +298,10 @@ public class PlayerActivity extends AppCompatActivity {
 
     @Override
     public void onBackPressed() {
+        if (fullscreen) {
+            toggleFullscreen();
+            return;
+        }
         super.onBackPressed();
-        finish();
-    }
-
-    private void hideSystemUi() {
-        View decor = getWindow().getDecorView();
-        decor.setSystemUiVisibility(View.SYSTEM_UI_FLAG_LAYOUT_STABLE
-                | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
-                | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY);
     }
 }
