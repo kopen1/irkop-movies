@@ -57,7 +57,22 @@ Workflow `.github/workflows/android.yml` otomatis build APK saat folder `android
 Android hanya mengizinkan update bila APK baru ditandatangani dengan **kunci yang sama** dan
 `versionCode` lebih besar. Workflow sudah otomatis menaikkan `versionCode` dari nomor build GitHub.
 
-Agar dapat update tanpa uninstall:
+### Cara cepat: generate keystore lewat GitHub
+Jalankan workflow **Actions → Generate Android Keystore → Run workflow** (isi password & alias).
+Setelah selesai, buka **log job**-nya → copy nilai yang tercetak:
+- `ANDROID_KEY_ALIAS`
+- `ANDROID_KEYSTORE_PASSWORD`
+- `ANDROID_KEY_PASSWORD`
+- `ANDROID_KEYSTORE_BASE64` (satu baris panjang, di antara `BEGIN_BASE64`/`END_BASE64`)
+
+Lalu isi di **Settings → Secrets and variables → Actions**.
+
+> ⚠️ **Penting:** log workflow bisa dilihat siapa pun yang punya akses repo (dan pada repo publik,
+> log/artifact bisa diakses publik). Setelah menyalin nilai, **hapus run ini/artifact**, jangan
+> bagikan isinya, dan sebaiknya hapus file `.github/workflows/generate-keystore.yml` setelah dipakai.
+> Kalau ragu, generate keystore secara lokal (cara di bawah) dan repo tetap privat.
+
+Agar dapat update tanpa uninstall (cara lokal):
 1. Buat keystore sekali (di PC):
    ```bash
    keytool -genkeypair -v -keystore nontongo.keystore -alias nontongo \
