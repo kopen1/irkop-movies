@@ -10,6 +10,9 @@ interface Suggestion {
   title: string;
   slug: string;
   type: string | null;
+  year?: string | null;
+  poster?: string | null;
+  post_id?: number | null;
 }
 
 export function Search() {
@@ -59,7 +62,18 @@ export function Search() {
 
   function pick(s: Suggestion) {
     setShowSuggest(false);
-    navigate(`/detail/${encodeURIComponent(s.slug)}`);
+    navigate(`/detail/${encodeURIComponent(s.slug)}`, {
+      state: {
+        item: {
+          slug: s.slug,
+          title: s.title,
+          poster: s.poster ?? null,
+          type: s.type,
+          year: s.year ?? null,
+          id: s.post_id != null ? String(s.post_id) : null,
+        },
+      },
+    });
   }
 
   return (

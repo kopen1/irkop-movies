@@ -8,7 +8,7 @@ import { lk21Related } from "../lk21/recommend";
 import { lk21Search, lk21SearchSuggest } from "../lk21/search";
 import type { CatalogItem } from "../lk21/search";
 import { getMaxId, vaultCatalog, vaultCatalogFiltered, vaultDetail } from "../lk21/vault";
-import { searchTitles, suggestTitles, upsertTitles } from "../lk21/titles";
+import { getTitleBySlug, searchTitles, suggestTitles, upsertTitles } from "../lk21/titles";
 
 function base(ctx: RouteContext): string {
   return ctx.env.LK21_BASE || DEFAULT_LK21_BASE;
@@ -308,6 +308,9 @@ export async function detail(ctx: RouteContext): Promise<Response> {
     }
   }
 
+  // Fallback cepat dari indeks D1 (tanpa relay).
+  const local = await getTitleBySlug(ctx, slug).catch(() => null);
+
   try {
     const data = await lk21DetailPage(slug, base(ctx));
     let post: Awaited<ReturnType<typeof lk21PostDetail>>[number] | null = null;
@@ -329,12 +332,12 @@ export async function detail(ctx: RouteContext): Promise<Response> {
   } catch {
     return json({
       slug,
-      title: slug,
-      year: null,
+      title: local?.title || slug,
+      year: local?.year ?? null,
       overview: "",
-      poster: null,
-      postId: null,
-      type: null,
+      poster: local?.poster ?? null,
+      postId: local?.post_id ?? null,
+      type: local?.type ?? null,
       runtime: null,
       rating: null,
       url: "",

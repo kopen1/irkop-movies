@@ -126,69 +126,125 @@ export function Detail() {
     }
   }
 
+  const initials = view.title
+    .split(" ")
+    .slice(0, 2)
+    .map((w) => w[0] || "")
+    .join("")
+    .toUpperCase();
+
+  const chips: { label: string; className?: string }[] = [];
+  if (view.rating != null) chips.push({ label: `★ ${Number(view.rating).toFixed(1)}`, className: "text-gold" });
+  if (view.year) chips.push({ label: view.year });
+  if (view.type) chips.push({ label: view.type });
+  if (view.runtime) chips.push({ label: view.runtime });
+
   return (
     <div className="pb-8">
-      <div className="relative h-[clamp(260px,70vw,330px)]">
-        {view.poster && <img src={view.poster} alt={view.title} className="absolute inset-0 w-full h-full object-cover" />}
-        <div className="absolute inset-0 bg-gradient-to-t from-app via-app/40 to-app/60" />
-        <button
-          className="absolute top-3 left-3 w-11 h-11 rounded-full grid place-items-center bg-black/50 backdrop-blur"
-          onClick={() => navigate(-1)}
-          aria-label="Kembali"
-        >
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M15 18l-6-6 6-6" />
-          </svg>
-        </button>
-        <button
-          className="absolute top-3 right-3 w-11 h-11 rounded-full grid place-items-center bg-black/50 backdrop-blur"
-          onClick={share}
-          aria-label="Bagikan"
-        >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M4 12v8h16v-8" />
-            <path d="M12 3v12" />
-            <path d="M8 7l4-4 4 4" />
-          </svg>
-        </button>
-        <div className="absolute left-0 right-0 bottom-0 p-5">
-          <h1 className="text-2xl font-extrabold leading-tight mb-2">{view.title}</h1>
-          <div className="flex items-center gap-2 text-xs flex-wrap">
-            {view.rating != null && <span className="text-gold font-bold">★ {Number(view.rating).toFixed(1)}</span>}
-            <span>{view.year || ""}</span>
-            {view.type && <span className="border border-white/40 rounded px-1.5 py-0.5 text-[10px] uppercase">{view.type}</span>}
+      {/* Backdrop */}
+      <div className="relative">
+        <div className="relative h-[clamp(200px,54vw,260px)] overflow-hidden">
+          {view.poster ? (
+            <img src={view.poster} alt="" className="w-full h-full object-cover scale-110 blur-[2px] opacity-60" />
+          ) : (
+            <div className="w-full h-full bg-gradient-to-br from-surface2 to-app" />
+          )}
+          <div className="absolute inset-0 bg-gradient-to-t from-app via-app/70 to-app/20" />
+
+          <div className="absolute top-0 left-0 right-0 flex items-center justify-between p-3">
+            <button
+              className="w-10 h-10 rounded-full grid place-items-center bg-black/50 backdrop-blur hover:bg-black/70"
+              onClick={() => navigate(-1)}
+              aria-label="Kembali"
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M15 18l-6-6 6-6" />
+              </svg>
+            </button>
+            <div className="flex gap-2">
+              <button
+                className="w-10 h-10 rounded-full grid place-items-center bg-black/50 backdrop-blur hover:bg-black/70"
+                onClick={share}
+                aria-label="Bagikan"
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M4 12v8h16v-8" />
+                  <path d="M12 3v12" />
+                  <path d="M8 7l4-4 4 4" />
+                </svg>
+              </button>
+              <button
+                className={`w-10 h-10 rounded-full grid place-items-center backdrop-blur ${
+                  inWatchlist ? "bg-accent" : "bg-black/50 hover:bg-black/70"
+                }`}
+                onClick={toggleWatchlist}
+                aria-label="Watchlist"
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill={inWatchlist ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2">
+                  <path d="M20.8 4.6a5.5 5.5 0 00-7.8 0L12 5.6l-1-1a5.5 5.5 0 10-7.8 7.8l1 1L12 21.2l7.8-7.8 1-1a5.5 5.5 0 000-7.8z" />
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Poster + judul */}
+        <div className="px-4 -mt-16 flex items-end gap-3">
+          <div className="w-[92px] shrink-0 aspect-[2/3] rounded-xl overflow-hidden border border-line shadow-2xl bg-surface2">
+            {view.poster ? (
+              <img src={view.poster} alt={view.title} className="w-full h-full object-cover" />
+            ) : (
+              <div className="grid place-items-center h-full text-xl font-extrabold text-white/30">{initials}</div>
+            )}
+          </div>
+          <div className="pb-0.5 min-w-0">
+            <h1 className="text-lg font-extrabold leading-tight line-clamp-2">{view.title}</h1>
+            <div className="flex flex-wrap items-center gap-1.5 mt-2">
+              {chips.map((c, i) => (
+                <span
+                  key={i}
+                  className={`text-[10px] font-semibold px-2 py-0.5 rounded-md bg-white/10 capitalize ${c.className || ""}`}
+                >
+                  {c.label}
+                </span>
+              ))}
+            </div>
           </div>
         </div>
       </div>
 
-      <div className="flex gap-3 px-4 mt-4">
+      {/* Aksi */}
+      <div className="px-4 mt-4 flex gap-2">
         <button
           onClick={() => {
             setPlaySlug(view.slug);
             setPlaying(true);
           }}
-          className="flex-1 bg-accent hover:bg-accent2 rounded-full py-3 font-bold text-sm"
+          className="flex-1 flex items-center justify-center gap-2 bg-accent hover:bg-accent2 rounded-full py-3 font-bold text-sm shadow-lg shadow-accent/30"
         >
-          ▶ Tonton Sekarang
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M8 5v14l11-7z" />
+          </svg>
+          Tonton Sekarang
         </button>
         <button
           onClick={toggleWatchlist}
-          className={`px-6 rounded-full font-bold text-sm ${inWatchlist ? "bg-accent2" : "bg-white/15"}`}
+          className={`px-5 rounded-full font-bold text-sm ${inWatchlist ? "bg-accent2" : "bg-white/15 hover:bg-white/20"}`}
         >
           {inWatchlist ? "✓ Tersimpan" : "＋ Watchlist"}
         </button>
       </div>
 
-      <p className="px-4 mt-2 text-[11px] text-muted">
-        Catatan: bila player dalam app tidak tersedia, film dibuka di tab baru.
-      </p>
-
+      {/* Sinopsis */}
       <div className="px-4 mt-5">
-        <h3 className="font-bold mb-2">Sinopsis</h3>
-        <p className="text-sm leading-relaxed text-[#dbe2f0]">{view.overview || "Belum ada sinopsis."}</p>
+        <div className="bg-surface/70 border border-line rounded-2xl p-4">
+          <h3 className="font-bold mb-2 text-sm">Sinopsis</h3>
+          <p className="text-sm leading-relaxed text-[#dbe2f0]">{view.overview || "Belum ada sinopsis."}</p>
+        </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 px-4 mt-5">
+      {/* Info */}
+      <div className="grid grid-cols-2 gap-3 px-4 mt-4">
         <div className="bg-surface border border-line rounded-2xl p-3">
           <div className="text-[10px] uppercase tracking-wider text-muted">Tipe</div>
           <div className="font-bold mt-0.5 capitalize">{view.type || "movie"}</div>
@@ -203,12 +259,10 @@ export function Detail() {
             <div className="font-bold mt-0.5">{view.runtime}</div>
           </div>
         )}
-        {view.postId && (
-          <div className="bg-surface border border-line rounded-2xl p-3">
-            <div className="text-[10px] uppercase tracking-wider text-muted">ID</div>
-            <div className="font-bold mt-0.5">#{view.postId}</div>
-          </div>
-        )}
+        <div className="bg-surface border border-line rounded-2xl p-3">
+          <div className="text-[10px] uppercase tracking-wider text-muted">Rating</div>
+          <div className="font-bold mt-0.5">{view.rating != null ? `★ ${Number(view.rating).toFixed(1)}` : "—"}</div>
+        </div>
       </div>
 
       {isSeries && (

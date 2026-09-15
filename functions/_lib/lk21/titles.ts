@@ -5,6 +5,22 @@ export interface TitleRow {
   title: string;
   slug: string;
   type: string | null;
+  year?: string | null;
+  poster?: string | null;
+  post_id?: number | null;
+}
+
+export async function getTitleBySlug(ctx: RouteContext, slug: string): Promise<TitleRow | null> {
+  try {
+    const row = await ctx.env.DB.prepare(
+      "SELECT slug, title, year, type, poster, post_id FROM titles WHERE slug = ?"
+    )
+      .bind(slug)
+      .first<TitleRow>();
+    return row || null;
+  } catch {
+    return null;
+  }
 }
 
 // Simpan/segarkan banyak judul ke indeks D1.
@@ -40,7 +56,7 @@ export async function upsertTitles(ctx: RouteContext, items: CatalogItem[]): Pro
 export async function suggestTitles(ctx: RouteContext, q: string, limit = 10): Promise<TitleRow[]> {
   try {
     const rows = await ctx.env.DB.prepare(
-      "SELECT title, slug, type FROM titles WHERE title_lc LIKE ? ORDER BY updated_at DESC LIMIT ?"
+      "SELECT title, slug, type, year, poster, post_id FROM titles WHERE title_lc LIKE ? ORDER BY updated_at DESC LIMIT ?"
     )
       .bind(`%${q.toLowerCase()}%`, limit)
       .all<TitleRow>();

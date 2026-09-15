@@ -56,9 +56,9 @@ export const api = {
   country: (c: string, page = 1) =>
     request<{ items: CatalogItem[]; totalPages: number; page: number }>(`/catalog/country?c=${encodeURIComponent(c)}&page=${page}`),
   suggest: (q: string) =>
-    request<{ items: { title: string; slug: string; type: string | null }[] }>(
-      `/catalog/suggest?q=${encodeURIComponent(q)}`
-    ),
+    request<{
+      items: { title: string; slug: string; type: string | null; year?: string | null; poster?: string | null; post_id?: number | null }[];
+    }>(`/catalog/suggest?q=${encodeURIComponent(q)}`),
   detail: (slug: string, id?: number | null) =>
     request<DetailData>(`/catalog/detail/${encodeURIComponent(slug)}${id ? `?id=${id}` : ""}`),
   list: (type: "movie" | "series", page = 1) =>
