@@ -71,6 +71,7 @@ const ROUTES: RouteDef[] = [
   { method: "GET", path: "admin/stream-health", handler: admin.streamHealth },
   { method: "GET", path: "admin/stream-map/build", handler: admin.streamMapBuild },
   { method: "GET", path: "admin/stream-map/build-stream", handler: admin.streamMapBuildStream },
+  { method: "GET", path: "admin/index-titles", handler: admin.indexTitlesStream },
   { method: "GET", path: "admin/stream-map", handler: admin.streamMapList },
   { method: "DELETE", path: "admin/stream-map/:slug", handler: admin.streamMapDelete },
 

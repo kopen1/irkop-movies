@@ -5,6 +5,7 @@ import { fetchDetailHtml } from "../lk21/detail";
 import { parseAllServers, resolveFirstServer, resolveStream } from "../lk21/stream";
 import { deleteStreamMap, getStreamMap, saveServers, saveStreamMap } from "../lk21/streamMap";
 import { vaultCatalog } from "../lk21/vault";
+import { countTitles, upsertTitles } from "../lk21/titles";
 
 function ensureAdmin(ctx: RouteContext): Response | null {
   if (!ctx.user) return error("Perlu login", 401);
@@ -36,6 +37,7 @@ export async function stats(ctx: RouteContext): Promise<Response> {
     ctx.env.DB.prepare("SELECT COUNT(*) AS n FROM history").first<{ n: number }>(),
     ctx.env.DB.prepare("SELECT COUNT(*) AS n FROM stream_map").first<{ n: number }>(),
   ]);
+  const titlesCount = await countTitles(ctx);
   const recent = await ctx.env.DB.prepare(
     "SELECT id, email, name, role, status, created_at, last_login_at FROM users ORDER BY created_at DESC LIMIT 5"
   ).all();
@@ -46,6 +48,7 @@ export async function stats(ctx: RouteContext): Promise<Response> {
       watchlist: watchlist?.n ?? 0,
       history: history?.n ?? 0,
       streamMap: streamMap?.n ?? 0,
+      titles: titlesCount,
     },
     recentUsers: recent.results || [],
   });
@@ -205,9 +208,9 @@ export async function streamMapBuild(ctx: RouteContext): Promise<Response> {
   const single = ctx.url.searchParams.get("slug");
   const base = ctx.env.LK21_BASE || DEFAULT_LK21_BASE;
 
-  const slugs: string[] = single
-    ? [single]
-    : (await vaultCatalog(ctx, page, limit).catch(() => [])).map((i) => i.slug).filter(Boolean);
+  const catalogItems = single ? [] : await vaultCatalog(ctx, page, limit).catch(() => []);
+  if (catalogItems.length) await upsertTitles(ctx, catalogItems).catch(() => {});
+  const slugs: string[] = single ? [single] : catalogItems.map((i) => i.slug).filter(Boolean);
 
   let built = 0;
   let skipped = 0;
@@ -276,8 +279,9 @@ export async function streamMapBuildStream(ctx: RouteContext): Promise<Response>
   const limit = Math.min(30, Math.max(1, Number(ctx.url.searchParams.get("limit") || "10") || 10));
   const page = Math.max(1, Number(ctx.url.searchParams.get("page") || "1") || 1);
   const base = ctx.env.LK21_BASE || DEFAULT_LK21_BASE;
-  const slugs = (await vaultCatalog(ctx, page, limit).catch(() => []).then((r) => r.map((i) => i.slug)))
-    .filter(Boolean);
+  const catalogItems = await vaultCatalog(ctx, page, limit).catch(() => []);
+  if (catalogItems.length) await upsertTitles(ctx, catalogItems).catch(() => {});
+  const slugs = catalogItems.map((i) => i.slug).filter(Boolean);
 
   const encoder = new TextEncoder();
   const stream = new ReadableStream({
@@ -318,6 +322,42 @@ export async function streamMapBuildStream(ctx: RouteContext): Promise<Response>
   return new Response(stream, {
     headers: { "Content-Type": "application/x-ndjson", "Cache-Control": "no-store" },
   });
+}
+
+export async function indexTitlesStream(ctx: RouteContext): Promise<Response> {
+  const key = ctx.url.searchParams.get("key");
+  const keyOk = Boolean(key && ctx.env.SESSION_SECRET && key === ctx.env.SESSION_SECRET);
+  if (!keyOk) {
+    const guard = ensureAdmin(ctx);
+    if (guard) return guard;
+  }
+  const from = Math.max(1, Number(ctx.url.searchParams.get("from") || "1") || 1);
+  const pages = Math.min(200, Math.max(1, Number(ctx.url.searchParams.get("pages") || "30") || 30));
+
+  const encoder = new TextEncoder();
+  const stream = new ReadableStream({
+    async start(controller) {
+      const send = (obj: unknown) => controller.enqueue(encoder.encode(JSON.stringify(obj) + "\n"));
+      let indexed = 0;
+      let empty = 0;
+      for (let p = from; p < from + pages; p++) {
+        const items = await vaultCatalog(ctx, p, 24).catch(() => []);
+        if (!items.length) {
+          empty++;
+          send({ page: p, indexed: 0 });
+          if (empty >= 3) break;
+          continue;
+        }
+        empty = 0;
+        await upsertTitles(ctx, items).catch(() => {});
+        indexed += items.length;
+        send({ page: p, indexed: items.length });
+      }
+      send({ done: true, indexed, total: await countTitles(ctx) });
+      controller.close();
+    },
+  });
+  return new Response(stream, { headers: { "Content-Type": "application/x-ndjson", "Cache-Control": "no-store" } });
 }
 
 export async function streamHealth(ctx: RouteContext): Promise<Response> {

@@ -25,6 +25,12 @@ export function Streams() {
   const [progress, setProgress] = useState<string[]>([]);
   const [buildResult, setBuildResult] = useState<BuildResult | null>(null);
 
+  // --- Index judul (untuk autocomplete/pencarian) ---
+  const [idxFrom, setIdxFrom] = useState(1);
+  const [idxPages, setIdxPages] = useState(30);
+  const [indexing, setIndexing] = useState(false);
+  const [idxLog, setIdxLog] = useState<string[]>([]);
+
   // --- Kelola mapping ---
   const [q, setQ] = useState("");
   const [listPage, setListPage] = useState(1);
@@ -78,6 +84,36 @@ export function Streams() {
       toast((e as Error).message);
     } finally {
       setBuilding(false);
+    }
+  }
+
+  async function indexTitles() {
+    setIndexing(true);
+    setIdxLog([]);
+    try {
+      const sp = new URLSearchParams({ from: String(idxFrom), pages: String(idxPages) });
+      const res = await fetch(`/api/admin/index-titles?${sp.toString()}`, { credentials: "include" });
+      if (!res.ok || !res.body) throw new Error(`HTTP ${res.status}`);
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buf = "";
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buf += decoder.decode(value, { stream: true });
+        const parts = buf.split("\n");
+        buf = parts.pop() || "";
+        for (const line of parts) {
+          if (!line.trim()) continue;
+          const o = JSON.parse(line);
+          setIdxLog((l) => [...l, o.done ? `SELESAI — total indeks: ${o.total}` : `Hal ${o.page}: +${o.indexed}`]);
+        }
+      }
+      toast("Index judul selesai");
+    } catch (e) {
+      toast((e as Error).message);
+    } finally {
+      setIndexing(false);
     }
   }
 
@@ -136,6 +172,46 @@ export function Streams() {
           <div className="max-h-40 overflow-y-auto rounded-xl border border-line bg-black/30 p-2 text-[11px] font-mono">
             {progress.map((p, i) => (
               <div key={i}>{p}</div>
+            ))}
+          </div>
+        )}
+      </section>
+
+      <section>
+        <h2 className="font-bold mb-2">Index judul (untuk autocomplete & pencarian)</h2>
+        <p className="text-xs text-muted mb-3">
+          Menyalin judul dari katalog ke database agar pencarian/autocomplete jalan tanpa relay.
+        </p>
+        <div className="flex items-center gap-2 mb-3">
+          <label className="text-xs text-muted">Dari hal.</label>
+          <input
+            type="number"
+            min={1}
+            value={idxFrom}
+            onChange={(e) => setIdxFrom(Math.max(1, Number(e.target.value) || 1))}
+            className="w-20 bg-surface border border-line rounded-lg px-2 py-2 text-sm"
+          />
+          <label className="text-xs text-muted">Jumlah hal.</label>
+          <input
+            type="number"
+            min={1}
+            max={200}
+            value={idxPages}
+            onChange={(e) => setIdxPages(Math.min(200, Math.max(1, Number(e.target.value) || 30)))}
+            className="w-20 bg-surface border border-line rounded-lg px-2 py-2 text-sm"
+          />
+          <button
+            onClick={indexTitles}
+            disabled={indexing}
+            className="bg-accent hover:bg-accent2 rounded-lg px-4 py-2 text-sm font-bold disabled:opacity-50"
+          >
+            {indexing ? "Mengindeks..." : "Index"}
+          </button>
+        </div>
+        {idxLog.length > 0 && (
+          <div className="max-h-40 overflow-y-auto rounded-xl border border-line bg-black/30 p-2 text-[11px] font-mono">
+            {idxLog.map((l, i) => (
+              <div key={i}>{l}</div>
             ))}
           </div>
         )}

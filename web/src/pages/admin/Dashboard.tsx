@@ -11,7 +11,7 @@ export function Dashboard() {
     { label: "Total User", value: data.totals.users },
     { label: "Sesi Aktif", value: data.totals.activeSessions },
     { label: "Mapping Stream", value: data.totals.streamMap },
-    { label: "Watchlist", value: data.totals.watchlist },
+    { label: "Judul Terindeks", value: data.totals.titles },
   ];
 
   return (

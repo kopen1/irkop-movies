@@ -125,6 +125,19 @@ CREATE TABLE IF NOT EXISTS audit_logs (
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
+-- Indeks judul (untuk autocomplete & pencarian tanpa relay).
+CREATE TABLE IF NOT EXISTS titles (
+  slug       TEXT PRIMARY KEY,
+  title      TEXT NOT NULL,
+  title_lc   TEXT NOT NULL,
+  year       TEXT,
+  type       TEXT,
+  poster     TEXT,
+  post_id    INTEGER,
+  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_titles_lc ON titles(title_lc);
+
 -- Statistik kunjungan (tanpa menyimpan IP mentah; disimpan sbg hash).
 CREATE TABLE IF NOT EXISTS visits (
   id         INTEGER PRIMARY KEY AUTOINCREMENT,

@@ -8,6 +8,7 @@ import { lk21Related } from "../lk21/recommend";
 import { lk21Search, lk21SearchSuggest } from "../lk21/search";
 import type { CatalogItem } from "../lk21/search";
 import { getMaxId, vaultCatalog, vaultCatalogFiltered, vaultDetail } from "../lk21/vault";
+import { searchTitles, suggestTitles, upsertTitles } from "../lk21/titles";
 
 function base(ctx: RouteContext): string {
   return ctx.env.LK21_BASE || DEFAULT_LK21_BASE;
@@ -35,11 +36,17 @@ async function estimateTotalPages(ctx: RouteContext, size: number): Promise<numb
 async function feed(ctx: RouteContext, path: string, page: number, opts: FeedOpts = {}): Promise<FeedResult> {
   const size = opts.size ?? 24;
 
+  // Simpan judul ke indeks D1 (untuk autocomplete/pencarian tanpa relay).
+  const finish = (result: FeedResult): FeedResult => {
+    if (result.items.length) ctx.waitUntil(upsertTitles(ctx, result.items).catch(() => {}));
+    return result;
+  };
+
   // totalPages selalu mengikuti data project (vault), bukan angka listing upstream.
   try {
     const { items } = await lk21ListingPage(path, base(ctx));
     if (items.length) {
-      return { items, totalPages: await estimateTotalPages(ctx, size) };
+      return finish({ items, totalPages: await estimateTotalPages(ctx, size) });
     }
   } catch {
     /* lanjut */
@@ -54,7 +61,7 @@ async function feed(ctx: RouteContext, path: string, page: number, opts: FeedOpt
     }
     if (all.length) {
       if (opts.sortByRating) all.sort((a, b) => (b.rating || 0) - (a.rating || 0));
-      return { items: all.slice(0, size), totalPages: await estimateTotalPages(ctx, size) };
+      return finish({ items: all.slice(0, size), totalPages: await estimateTotalPages(ctx, size) });
     }
   } catch {
     /* lanjut */
@@ -71,7 +78,7 @@ async function feed(ctx: RouteContext, path: string, page: number, opts: FeedOpt
     } else {
       items = await vaultCatalog(ctx, page, size);
     }
-    return { items, totalPages: await estimateTotalPages(ctx, size) };
+    return finish({ items, totalPages: await estimateTotalPages(ctx, size) });
   } catch {
     return { items: [], totalPages: 1 };
   }
@@ -122,6 +129,7 @@ export async function list(ctx: RouteContext): Promise<Response> {
     const page = Number(ctx.url.searchParams.get("page") || "1") || 1;
     const size = 24;
     const items = await vaultCatalogFiltered(ctx, page, size, type).catch(() => [] as CatalogItem[]);
+    if (items.length) ctx.waitUntil(upsertTitles(ctx, items).catch(() => {}));
     const totalPages = await estimateTotalPages(ctx, size);
     return json({ items, totalPages, page, type });
   });
@@ -221,9 +229,23 @@ export async function search(ctx: RouteContext): Promise<Response> {
 
   try {
     const result = await lk21Search(q, page);
-    return json({ ...result, items: filter(result.items), query: q, source: "search" });
+    if (result.items.length) {
+      ctx.waitUntil(upsertTitles(ctx, result.items).catch(() => {}));
+      return json({ ...result, items: filter(result.items), query: q, source: "search" });
+    }
   } catch {
     /* fallback */
+  }
+
+  // Indeks D1 (tanpa relay) — total halaman ikut project.
+  const local = await searchTitles(ctx, q, page, 24);
+  if (local.items.length) {
+    return json({
+      items: filter(local.items),
+      totalPages: Math.max(1, Math.ceil(local.total / 24)),
+      query: q,
+      source: "index",
+    });
   }
 
   let items = await searchViaListing(ctx, q).catch(() => [] as CatalogItem[]);
@@ -243,6 +265,10 @@ export async function suggest(ctx: RouteContext): Promise<Response> {
   } catch {
     /* lanjut fallback */
   }
+
+  // Indeks judul D1 (tanpa relay).
+  const local = await suggestTitles(ctx, q, 10);
+  if (local.length) return json({ items: local });
 
   const needle = q.toLowerCase();
   const out: { title: string; slug: string; type: string | null }[] = [];
