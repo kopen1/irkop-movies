@@ -35,10 +35,11 @@ async function estimateTotalPages(ctx: RouteContext, size: number): Promise<numb
 async function feed(ctx: RouteContext, path: string, page: number, opts: FeedOpts = {}): Promise<FeedResult> {
   const size = opts.size ?? 24;
 
+  // totalPages selalu mengikuti data project (vault), bukan angka listing upstream.
   try {
-    const { items, totalPages } = await lk21ListingPage(path, base(ctx));
+    const { items } = await lk21ListingPage(path, base(ctx));
     if (items.length) {
-      return { items, totalPages: totalPages ?? (await estimateTotalPages(ctx, size)) };
+      return { items, totalPages: await estimateTotalPages(ctx, size) };
     }
   } catch {
     /* lanjut */
@@ -47,15 +48,13 @@ async function feed(ctx: RouteContext, path: string, page: number, opts: FeedOpt
   try {
     const pages = opts.sortByRating ? [1, 2, 3] : [page];
     const all: CatalogItem[] = [];
-    let tp = 0;
     for (const p of pages) {
       const res = await lk21Search("*", p);
       all.push(...res.items);
-      tp = Math.max(tp, res.totalPages || 0);
     }
     if (all.length) {
       if (opts.sortByRating) all.sort((a, b) => (b.rating || 0) - (a.rating || 0));
-      return { items: all.slice(0, size), totalPages: tp || (await estimateTotalPages(ctx, size)) };
+      return { items: all.slice(0, size), totalPages: await estimateTotalPages(ctx, size) };
     }
   } catch {
     /* lanjut */

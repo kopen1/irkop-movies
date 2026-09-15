@@ -125,6 +125,17 @@ CREATE TABLE IF NOT EXISTS audit_logs (
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
+-- Statistik kunjungan (tanpa menyimpan IP mentah; disimpan sbg hash).
+CREATE TABLE IF NOT EXISTS visits (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  path       TEXT,
+  referer    TEXT,
+  visitor    TEXT,
+  ua         TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_visits_created ON visits(created_at);
+
 -- flag awal
 INSERT OR IGNORE INTO feature_flags (key, value) VALUES ('registration_open', 'true');
 INSERT OR IGNORE INTO feature_flags (key, value) VALUES ('maintenance', 'false');

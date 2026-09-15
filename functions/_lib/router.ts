@@ -8,6 +8,7 @@ import * as stream from "./routes/stream";
 import * as user from "./routes/user";
 import * as admin from "./routes/admin";
 import { debugUpstreams, health } from "./routes/debug";
+import { trackVisit, visitsAdmin } from "./routes/visits";
 
 type Handler = (ctx: RouteContext) => Promise<Response>;
 type Method = "GET" | "POST" | "PATCH" | "DELETE";
@@ -73,6 +74,9 @@ const ROUTES: RouteDef[] = [
   { method: "GET", path: "admin/stream-map", handler: admin.streamMapList },
   { method: "DELETE", path: "admin/stream-map/:slug", handler: admin.streamMapDelete },
 
+  { method: "POST", path: "visit", handler: trackVisit },
+  { method: "GET", path: "admin/visits", handler: visitsAdmin },
+
   { method: "GET", path: "health", handler: health },
   { method: "GET", path: "debug/lk21", handler: debugUpstreams },
 ];
@@ -121,7 +125,12 @@ export async function handleApi(context: AppContext): Promise<Response> {
   const path = url.pathname.replace(/^\/api\/?/, "").replace(/\/+$/, "");
   const seg = path.split("/").filter(Boolean);
 
-  if (path.startsWith("catalog/") || path.startsWith("stream/") || path.startsWith("auth/")) {
+  if (
+    path.startsWith("catalog/") ||
+    path.startsWith("stream/") ||
+    path.startsWith("auth/") ||
+    path === "visit"
+  ) {
     const ip = context.request.headers.get("CF-Connecting-IP") || "unknown";
     if (isRateLimited(ip)) return error("Terlalu banyak permintaan. Coba beberapa saat lagi.", 429);
   }

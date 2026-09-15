@@ -17,6 +17,7 @@ import { NotFound } from "./pages/NotFound";
 import { AdminLayout } from "./pages/admin/AdminLayout";
 import { Dashboard } from "./pages/admin/Dashboard";
 import { Users } from "./pages/admin/Users";
+import { Visits } from "./pages/admin/Visits";
 import { Flags } from "./pages/admin/Flags";
 import { Audit } from "./pages/admin/Audit";
 import { Streams } from "./pages/admin/Streams";
@@ -52,6 +53,7 @@ export default function App() {
         >
           <Route index element={<Dashboard />} />
           <Route path="users" element={<Users />} />
+          <Route path="visits" element={<Visits />} />
           <Route path="flags" element={<Flags />} />
           <Route path="audit" element={<Audit />} />
           <Route path="streams" element={<Streams />} />

@@ -21,7 +21,7 @@ set -u
 BASE="${BASE:-https://irkop-movies.pages.dev}"
 EMAIL="${EMAIL:-}"
 LIMIT="${LIMIT:-10}"
-START_PAGE="${START_PAGE:-1}"
+START_PAGE="316"
 MAX_PAGES="${MAX_PAGES:-500}"
 SLEEP="${SLEEP:-0}"
 

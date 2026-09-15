@@ -22,7 +22,8 @@ PLAY_MIRROR = "https://xx1.red"
 # Opsional: set jika upstream memblokir Worker (error "upstream 403").
 # Jalankan relay-node.mjs di IP residensial + cloudflared, lalu isi:
 # RELAY_URL = "https://<tunnel>.trycloudflare.com/?url="
-# RELAY_URL = ""
+# 
+#RELAY_URL = "https://mysimon-solution-massage-dealt.trycloudflare.com"
 
 # Secret (JANGAN ditulis di sini). Set lewat:
 #   wrangler pages secret put GOOGLE_CLIENT_SECRET

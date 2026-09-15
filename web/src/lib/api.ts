@@ -114,6 +114,13 @@ export const api = {
   adminFlagSet: (key: string, value: string) =>
     request<{ ok: boolean }>("/admin/flags", { method: "POST", body: JSON.stringify({ key, value }) }),
   adminAudit: () => request<{ items: AuditLog[] }>("/admin/audit"),
+  adminVisits: () =>
+    request<{
+      totals: { all: number; today: number; week: number; uniques: number };
+      daily: { d: string; n: number; u: number }[];
+      topPaths: { path: string; n: number }[];
+      recent: { path: string; referer: string | null; ua: string | null; created_at: string }[];
+    }>("/admin/visits"),
   adminStreamHealth: (slug: string) =>
     request<{ ok: boolean; fileUrl?: string; error?: string }>(`/admin/stream-health?slug=${encodeURIComponent(slug)}`),
   adminStreamMapBuild: (params: { limit?: number; page?: number; slug?: string } = {}) => {

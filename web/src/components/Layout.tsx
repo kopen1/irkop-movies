@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../stores/auth";
 import { useToast } from "../stores/toast";
 import { Toast } from "./Toast";
@@ -54,6 +54,17 @@ export function Layout() {
   const { user, logout } = useAuth();
   const toast = useToast((s) => s.show);
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // Catat kunjungan halaman (tanpa data sensitif).
+  useEffect(() => {
+    fetch("/api/visit", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ path: location.pathname, referer: document.referrer }),
+      keepalive: true,
+    }).catch(() => {});
+  }, [location.pathname]);
 
   return (
     <div className="w-full max-w-phone min-h-[100dvh] bg-app relative shadow-2xl pb-24">
