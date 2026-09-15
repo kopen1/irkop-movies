@@ -7,6 +7,9 @@ plugins {
 def releaseStore = System.getenv("RELEASE_STORE_FILE")
 def vCode = (System.getenv("VERSION_CODE") ?: "1").toInteger()
 def vName = System.getenv("VERSION_NAME") ?: "1.0"
+def storePass = (System.getenv("RELEASE_STORE_PASSWORD") ?: "").trim()
+def keyAliasVal = (System.getenv("RELEASE_KEY_ALIAS") ?: "").trim()
+def keyPass = (System.getenv("RELEASE_KEY_PASSWORD") ?: "").trim()
 
 android {
     namespace 'com.nontongo.app'
@@ -30,9 +33,9 @@ android {
         release {
             if (releaseStore != null) {
                 storeFile file(releaseStore)
-                storePassword (System.getenv("RELEASE_STORE_PASSWORD") ?: "").trim()
-                keyAlias (System.getenv("RELEASE_KEY_ALIAS") ?: "").trim()
-                keyPassword (System.getenv("RELEASE_KEY_PASSWORD") ?: "").trim()
+                storePassword storePass
+                keyAlias keyAliasVal
+                keyPassword keyPass
             }
         }
     }
