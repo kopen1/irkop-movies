@@ -62,6 +62,8 @@ const ROUTES: RouteDef[] = [
   { method: "GET", path: "admin/users", handler: admin.usersList },
   { method: "PATCH", path: "admin/users/:id", handler: admin.userUpdate },
   { method: "DELETE", path: "admin/users/:id", handler: admin.userDelete },
+  { method: "GET", path: "admin/settings", handler: admin.settingsGet },
+  { method: "POST", path: "admin/settings", handler: admin.settingsSet },
   { method: "GET", path: "admin/flags", handler: admin.flagsGet },
   { method: "POST", path: "admin/flags", handler: admin.flagsSet },
   { method: "GET", path: "admin/curated", handler: admin.curatedList },
@@ -104,6 +106,28 @@ function match(method: Method, path: string, seg: string[]): { handler: Handler;
   return null;
 }
 
+// Relay bisa diatur via panel admin (D1: feature_flags.relay_url) tanpa ubah env.
+// Env RELAY_URL dipakai sebagai fallback. Di-cache singkat agar tidak query tiap request.
+let cachedRelay: { value: string; at: number } | null = null;
+export function clearRelayCache(): void {
+  cachedRelay = null;
+}
+async function resolveRelay(context: AppContext): Promise<string> {
+  const now = Date.now();
+  if (cachedRelay && now - cachedRelay.at < 10000) return cachedRelay.value;
+
+  let value = context.env.RELAY_URL || "";
+  try {
+    const row = await context.env.DB.prepare("SELECT value FROM feature_flags WHERE key = 'relay_url'")
+      .first<{ value: string }>();
+    if (row?.value) value = row.value;
+  } catch {
+    /* biarkan pakai env */
+  }
+  cachedRelay = { value, at: now };
+  return value;
+}
+
 // Rate limit sederhana per-IP (per isolate, bukan global).
 const buckets = new Map<string, number[]>();
 function isRateLimited(ip: string, limit = 120, windowMs = 60_000): boolean {
@@ -120,7 +144,7 @@ export async function handleApi(context: AppContext): Promise<Response> {
     return new Response(null, { status: 204 });
   }
 
-  setRelay(context.env.RELAY_URL);
+  setRelay(await resolveRelay(context));
 
   const url = new URL(context.request.url);
   const path = url.pathname.replace(/^\/api\/?/, "").replace(/\/+$/, "");

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { api } from "../../lib/api";
 import { useAsync } from "../../lib/useAsync";
 import { useToast } from "../../stores/toast";
@@ -36,6 +36,23 @@ export function Streams() {
   const [listPage, setListPage] = useState(1);
   const [version, setVersion] = useState(0);
   const listQuery = useAsync(() => api.adminStreamMapList({ q, page: listPage }), [q, listPage, version]);
+
+  // --- Relay URL (dari panel, tanpa env) ---
+  const settingsQuery = useAsync(() => api.adminSettings(), [version]);
+  const [relayInput, setRelayInput] = useState("");
+  useEffect(() => {
+    if (settingsQuery.data) setRelayInput(settingsQuery.data.relayUrl || settingsQuery.data.envRelay || "");
+  }, [settingsQuery.data]);
+
+  async function saveRelay() {
+    try {
+      await api.adminSettingsSet(relayInput.trim());
+      toast("Relay URL disimpan");
+      setVersion((v) => v + 1);
+    } catch (e) {
+      toast((e as Error).message);
+    }
+  }
 
   async function check() {
     setLoading(true);
@@ -133,6 +150,31 @@ export function Streams() {
 
   return (
     <div className="px-4 space-y-6">
+      <section>
+        <h2 className="font-bold mb-2">Relay URL</h2>
+        <p className="text-xs text-muted mb-2">
+          Tempel URL tunnel di sini (mis. <code>https://xxxx.trycloudflare.com/?url=</code>). Dipakai untuk
+          build mapping. Tidak perlu ubah env/redeploy.
+        </p>
+        <div className="flex gap-2">
+          <input
+            value={relayInput}
+            onChange={(e) => setRelayInput(e.target.value)}
+            placeholder="https://xxxx.trycloudflare.com/?url="
+            className="flex-1 bg-surface border border-line rounded-lg px-3 py-2 text-xs outline-none focus:border-accent2"
+          />
+          <button onClick={saveRelay} className="bg-accent hover:bg-accent2 rounded-lg px-4 text-sm font-bold">
+            Simpan
+          </button>
+        </div>
+        {settingsQuery.data?.updatedAt && (
+          <p className="text-[11px] text-muted mt-1">Terakhir diubah: {settingsQuery.data.updatedAt}</p>
+        )}
+        {settingsQuery.data?.envRelay && (
+          <p className="text-[11px] text-muted mt-1 break-all">Env fallback: {settingsQuery.data.envRelay}</p>
+        )}
+      </section>
+
       <section>
         <h2 className="font-bold mb-2">Isi mapping stream (butuh relay aktif)</h2>
         <div className="flex items-center gap-2 mb-3">

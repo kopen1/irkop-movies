@@ -241,6 +241,34 @@ export async function streamMapBuild(ctx: RouteContext): Promise<Response> {
   return json({ total: slugs.length, built, skipped, failed });
 }
 
+export async function settingsGet(ctx: RouteContext): Promise<Response> {
+  const guard = ensureAdmin(ctx);
+  if (guard) return guard;
+  const relay = await ctx.env.DB.prepare("SELECT value, updated_at FROM feature_flags WHERE key = 'relay_url'")
+    .first<{ value: string; updated_at: string }>()
+    .catch(() => null);
+  return json({
+    relayUrl: relay?.value ?? "",
+    envRelay: ctx.env.RELAY_URL ?? "",
+    updatedAt: relay?.updated_at ?? null,
+  });
+}
+
+export async function settingsSet(ctx: RouteContext): Promise<Response> {
+  const guard = ensureAdmin(ctx);
+  if (guard) return guard;
+  const b = await readBody(ctx);
+  const relayUrl = String(b.relayUrl || "").trim();
+  await ctx.env.DB.prepare(
+    `INSERT INTO feature_flags (key, value, updated_by, updated_at) VALUES ('relay_url', ?, ?, datetime('now'))
+     ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_by = excluded.updated_by, updated_at = datetime('now')`
+  )
+    .bind(relayUrl, ctx.user!.id)
+    .run();
+  await audit(ctx, "settings.relay", relayUrl ? "set" : "clear", { relayUrl });
+  return json({ ok: true, relayUrl });
+}
+
 export async function streamMapList(ctx: RouteContext): Promise<Response> {
   const guard = ensureAdmin(ctx);
   if (guard) return guard;

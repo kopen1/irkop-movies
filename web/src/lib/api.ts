@@ -110,6 +110,13 @@ export const api = {
   adminUserUpdate: (id: number, patch: { role?: string; status?: string }) =>
     request<{ ok: boolean }>(`/admin/users/${id}`, { method: "PATCH", body: JSON.stringify(patch) }),
   adminUserDelete: (id: number) => request<{ ok: boolean }>(`/admin/users/${id}`, { method: "DELETE" }),
+  adminSettings: () =>
+    request<{ relayUrl: string; envRelay: string; updatedAt: string | null }>("/admin/settings"),
+  adminSettingsSet: (relayUrl: string) =>
+    request<{ ok: boolean; relayUrl: string }>("/admin/settings", {
+      method: "POST",
+      body: JSON.stringify({ relayUrl }),
+    }),
   adminFlags: () => request<{ items: FeatureFlag[] }>("/admin/flags"),
   adminFlagSet: (key: string, value: string) =>
     request<{ ok: boolean }>("/admin/flags", { method: "POST", body: JSON.stringify({ key, value }) }),
