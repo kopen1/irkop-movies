@@ -5,6 +5,8 @@ plugins {
 // Signing: bila env RELEASE_STORE_FILE diisi (mis. dari GitHub Secrets), APK release
 // ditandatangani dengan keystore tetap -> bisa update tanpa uninstall.
 def releaseStore = System.getenv("RELEASE_STORE_FILE")
+def vCode = (System.getenv("VERSION_CODE") ?: "1").toInteger()
+def vName = System.getenv("VERSION_NAME") ?: "1.0"
 
 android {
     namespace 'com.nontongo.app'
@@ -14,8 +16,8 @@ android {
         applicationId "com.nontongo.app"
         minSdk 26
         targetSdk 34
-        versionCode (System.getenv("VERSION_CODE") ?: "1").toInteger()
-        versionName System.getenv("VERSION_NAME") ?: "1.0"
+        versionCode vCode
+        versionName vName
         // Ganti BASE_URL bila domain berubah (harus diakhiri '/')
         buildConfigField "String", "BASE_URL", "\"https://irkop-movies.pages.dev/\""
     }
