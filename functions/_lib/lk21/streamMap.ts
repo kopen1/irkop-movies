@@ -24,7 +24,9 @@ export async function getServers(ctx: RouteContext, slug: string): Promise<Playe
 export async function saveServers(ctx: RouteContext, slug: string, refs: PlayerRef[]): Promise<void> {
   if (!refs.length) return;
   try {
-    await ctx.env.DB.prepare("DELETE FROM stream_servers WHERE slug = ?").bind(slug).run();
+    // Sudah ada -> jangan tulis ulang (hemat kuota write D1).
+    const existing = await getServers(ctx, slug);
+    if (existing.length) return;
     for (let i = 0; i < refs.length; i++) {
       await ctx.env.DB.prepare(
         "INSERT OR REPLACE INTO stream_servers (slug, idx, origin, host, player_id) VALUES (?, ?, ?, ?, ?)"

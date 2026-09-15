@@ -23,20 +23,34 @@ export async function getTitleBySlug(ctx: RouteContext, slug: string): Promise<T
   }
 }
 
-// Simpan/segarkan banyak judul ke indeks D1.
+// Simpan judul baru ke indeks D1 (hanya yang belum ada — hemat kuota write).
 export async function upsertTitles(ctx: RouteContext, items: CatalogItem[]): Promise<void> {
   const rows = items.filter((i) => i.slug && i.title);
   if (!rows.length) return;
+
+  // Cek slug yang sudah ada (read murah; write D1 free dibatasi).
+  const existing = new Set<string>();
+  try {
+    for (let i = 0; i < rows.length; i += 50) {
+      const chunk = rows.slice(i, i + 50).map((r) => r.slug);
+      const placeholders = chunk.map(() => "?").join(",");
+      const res = await ctx.env.DB.prepare(`SELECT slug FROM titles WHERE slug IN (${placeholders})`)
+        .bind(...chunk)
+        .all<{ slug: string }>();
+      for (const r of res.results || []) existing.add(r.slug);
+    }
+  } catch {
+    return;
+  }
+
+  const toInsert = rows.filter((r) => !existing.has(r.slug));
+  if (!toInsert.length) return;
   try {
     const stmt = ctx.env.DB.prepare(
-      `INSERT INTO titles (slug, title, title_lc, year, type, poster, post_id, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'))
-       ON CONFLICT(slug) DO UPDATE SET
-         title = excluded.title, title_lc = excluded.title_lc, year = excluded.year,
-         type = excluded.type, poster = excluded.poster, post_id = excluded.post_id,
-         updated_at = datetime('now')`
+      `INSERT OR IGNORE INTO titles (slug, title, title_lc, year, type, poster, post_id, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'))`
     );
-    const batch = rows.map((i) =>
+    const batch = toInsert.map((i) =>
       stmt.bind(
         i.slug,
         i.title,
@@ -103,10 +117,12 @@ export async function saveOverview(ctx: RouteContext, slug: string, overview: st
   const text = (overview || "").trim();
   if (!slug || text.length < 20) return;
   try {
-    await ctx.env.DB.prepare(
-      `INSERT INTO title_overviews (slug, overview, updated_at) VALUES (?, ?, datetime('now'))
-       ON CONFLICT(slug) DO UPDATE SET overview = excluded.overview, updated_at = datetime('now')`
-    )
+    // Hanya tulis kalau belum ada (hemat kuota write).
+    const existing = await ctx.env.DB.prepare("SELECT 1 AS x FROM title_overviews WHERE slug = ?")
+      .bind(slug)
+      .first<{ x: number }>();
+    if (existing) return;
+    await ctx.env.DB.prepare("INSERT OR IGNORE INTO title_overviews (slug, overview) VALUES (?, ?)")
       .bind(slug, text)
       .run();
   } catch {

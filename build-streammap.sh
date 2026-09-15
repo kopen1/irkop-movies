@@ -20,9 +20,9 @@ set -u
 
 BASE="${BASE:-https://irkop-movies.pages.dev}"
 EMAIL="${EMAIL:-}"
-LIMIT="${LIMIT:-10}"
-START_PAGE="316"
-MAX_PAGES="${MAX_PAGES:-500}"
+LIMIT="30"
+START_PAGE="1"
+MAX_PAGES="2000"
 SLEEP="${SLEEP:-0}"
 
 if [ -z "$EMAIL" ]; then
