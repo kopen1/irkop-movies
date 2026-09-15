@@ -168,7 +168,7 @@ export function Layout() {
             </button>
           )}
         </div>
-        <div className="px-5 py-4 text-[11px] text-muted border-t border-line">NontonGo v1.0 · Data LK21</div>
+        <div className="px-5 py-4 text-[11px] text-muted border-t border-line">NontonGo v1.0</div>
       </aside>
 
       <ToastCanvas />

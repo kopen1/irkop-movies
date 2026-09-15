@@ -1,0 +1,17 @@
+<resources>
+    <string name="app_name">NontonGo</string>
+    <string name="home">Home</string>
+    <string name="popular">Populer</string>
+    <string name="genre">Genre</string>
+    <string name="search">Cari</string>
+    <string name="watchlist">Watchlist</string>
+    <string name="play">Tonton</string>
+    <string name="continue_watching">Lanjutkan Menonton</string>
+    <string name="related">Rekomendasi Serupa</string>
+    <string name="episodes">Episode</string>
+    <string name="synopsis">Sinopsis</string>
+    <string name="no_synopsis">Belum ada sinopsis.</string>
+    <string name="prev">« Sebelumnya</string>
+    <string name="next">Berikutnya »</string>
+    <string name="page_info">Halaman %1$d dari %2$d</string>
+</resources>

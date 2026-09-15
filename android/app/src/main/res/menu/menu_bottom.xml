@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:id="@+id/nav_home" android:icon="@android:drawable/ic_menu_view" android:title="@string/home" />
+    <item android:id="@+id/nav_popular" android:icon="@android:drawable/btn_star" android:title="@string/popular" />
+    <item android:id="@+id/nav_genre" android:icon="@android:drawable/ic_menu_gallery" android:title="@string/genre" />
+    <item android:id="@+id/nav_search" android:icon="@android:drawable/ic_menu_search" android:title="@string/search" />
+    <item android:id="@+id/nav_watchlist" android:icon="@android:drawable/btn_star_big_on" android:title="@string/watchlist" />
+</menu>

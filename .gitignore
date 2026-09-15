@@ -24,5 +24,14 @@ npm-debug.log*
 .vscode/
 *.swp
 
+# android
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties
+android/.idea/
+*.iml
+captures/
+
 # misc
 coverage/
