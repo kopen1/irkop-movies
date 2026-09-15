@@ -119,10 +119,16 @@ public class HomeFragment extends Fragment {
     }
 
     private void addNavButton(LinearLayout row, String label, String mode) {
-        android.widget.Button b = new android.widget.Button(requireContext());
+        com.google.android.material.button.MaterialButton b =
+                new com.google.android.material.button.MaterialButton(requireContext());
         b.setText(label);
         b.setAllCaps(false);
         b.setTextSize(12);
+        b.setBackgroundTintList(android.content.res.ColorStateList.valueOf(0xFF2F3A52));
+        b.setStrokeColor(android.content.res.ColorStateList.valueOf(0xFF47546F));
+        b.setStrokeWidth(dp(1));
+        b.setCornerRadius(dp(10));
+        b.setTextColor(0xFFF2F6FD);
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
                 0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
         lp.setMargins(4, 0, 4, 0);

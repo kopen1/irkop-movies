@@ -7,6 +7,9 @@ on:
       - "android/**"
       - ".github/workflows/android.yml"
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -39,16 +42,13 @@ jobs:
         run: |
           BODY=$(printf '%s' "$KS_B64" | tr -cd 'A-Za-z0-9+/')
           LEN=${#BODY}
-          echo "Panjang base64 (tanpa padding): $LEN"
           PAD=$(( (4 - LEN % 4) % 4 ))
-          if [ "$PAD" -ne 0 ]; then
-            BODY="$BODY$(printf '%*s' "$PAD" '' | tr ' ' '=')"
-          fi
+          if [ "$PAD" -ne 0 ]; then BODY="$BODY$(printf '%*s' "$PAD" '' | tr ' ' '=')"; fi
           printf '%s' "$BODY" | base64 -d > android/app/nontongo.keystore 2>/dev/null || true
           SIZE=$(stat -c%s android/app/nontongo.keystore 2>/dev/null || echo 0)
           echo "Keystore bytes: $SIZE"
           if [ "$SIZE" -lt 100 ]; then
-            echo "::error::Gagal decode keystore ($SIZE byte). Ambil nilai ANDROID_KEYSTORE_BASE64 dari ARTIFACT 'android-keystore' (file keystore.b64) hasil workflow 'Generate Android Keystore', bukan hasil copy dari log."
+            echo "::error::Gagal decode keystore. Ambil ANDROID_KEYSTORE_BASE64 dari artifact 'android-keystore' (file keystore.b64)."
             exit 1
           fi
 
@@ -58,14 +58,9 @@ jobs:
           RELEASE_STORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           RELEASE_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
         run: |
-          PASS=$(printf '%s' "$RELEASE_STORE_PASSWORD")
-          ALIAS=$(printf '%s' "$RELEASE_KEY_ALIAS")
-          echo "Alias yang dipakai: '$ALIAS'"
-          keytool -list -keystore android/app/nontongo.keystore -storepass "$PASS" -alias "$ALIAS" 2>/tmp/kt.err && echo "Keystore valid." || {
-            echo "----- pesan keytool -----"
+          keytool -list -keystore android/app/nontongo.keystore -storepass "$RELEASE_STORE_PASSWORD" -alias "$RELEASE_KEY_ALIAS" >/dev/null 2>/tmp/kt.err && echo "Keystore valid." || {
             cat /tmp/kt.err
-            echo "-------------------------"
-            echo "::error::Keystore gagal dibuka. Kemungkinan: (a) ANDROID_KEYSTORE_BASE64 bukan isi keystore.b64 yang benar, atau (b) ANDROID_KEYSTORE_PASSWORD tidak sama dengan password saat generate, atau (c) alias salah."
+            echo "::error::Keystore gagal dibuka. Cek password/alias/base64."
             exit 1
           }
 
@@ -89,18 +84,22 @@ jobs:
           VERSION_NAME: "1.0.${{ github.run_number }}"
         run: gradle assembleDebug --no-daemon --stacktrace
 
-      - name: Upload release APK
+      - name: Publish signed APK to Release (tanpa zip)
         if: steps.check.outputs.signed == 'true'
-        uses: actions/upload-artifact@v4
-        with:
-          name: nontongo-apk
-          path: android/app/build/outputs/apk/release/app-release.apk
-          if-no-files-found: error
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release view apk-latest >/dev/null 2>&1 || \
+            gh release create apk-latest --title "NontonGo APK" --notes "Build otomatis dari GitHub Actions. Unduh app-release.apk (tidak di-zip)."
+          gh release upload apk-latest android/app/build/outputs/apk/release/app-release.apk --clobber
+          echo "Link: https://github.com/${{ github.repository }}/releases/download/apk-latest/app-release.apk"
 
-      - name: Upload debug APK
+      - name: Publish debug APK to Release (tanpa zip)
         if: steps.check.outputs.signed != 'true'
-        uses: actions/upload-artifact@v4
-        with:
-          name: nontongo-apk-debug
-          path: android/app/build/outputs/apk/debug/app-debug.apk
-          if-no-files-found: error
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release view apk-latest >/dev/null 2>&1 || \
+            gh release create apk-latest --title "NontonGo APK" --notes "Build otomatis dari GitHub Actions. Unduh app-debug.apk (tidak di-zip)."
+          gh release upload apk-latest android/app/build/outputs/apk/debug/app-debug.apk --clobber
+          echo "Link: https://github.com/${{ github.repository }}/releases/download/apk-latest/app-debug.apk"

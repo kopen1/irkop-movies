@@ -14,6 +14,7 @@
         app:use_controller="true" />
 
     <LinearLayout
+        android:id="@+id/player_bar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
@@ -86,5 +87,13 @@
             android:layout_marginTop="12dp"
             android:visibility="gone"
             android:text="Buka di browser" />
+
+        <Button
+            android:id="@+id/btn_back_msg"
+            style="@style/Widget.NontonGo.Button"
+            android:layout_width="wrap_content"
+            android:layout_height="40dp"
+            android:layout_marginTop="8dp"
+            android:text="Kembali" />
     </LinearLayout>
 </FrameLayout>

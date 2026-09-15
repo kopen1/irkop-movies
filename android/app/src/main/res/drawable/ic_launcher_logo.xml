@@ -1,0 +1,17 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- cincin luar (putih) -->
+    <path
+        android:fillColor="#F2F6FD"
+        android:fillType="evenOdd"
+        android:pathData="M54,22 a32,32 0 1,1 -0.1,0 z M54,29 a25,25 0 1,0 0.1,0 z" />
+
+    <!-- tombol play (merah lembut) -->
+    <path
+        android:fillColor="#A4161A"
+        android:pathData="M46,40 L70,54 L46,68 Z" />
+</vector>

@@ -47,22 +47,25 @@
 
                 <Button
                     android:id="@+id/d_play"
+                    style="@style/Widget.NontonGo.Button.Accent"
                     android:layout_width="0dp"
-                    android:layout_height="wrap_content"
+                    android:layout_height="44dp"
                     android:layout_weight="1"
                     android:text="@string/play" />
 
                 <Button
                     android:id="@+id/d_watch"
+                    style="@style/Widget.NontonGo.Button"
                     android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
+                    android:layout_height="44dp"
                     android:layout_marginStart="8dp"
                     android:text="＋" />
 
                 <Button
                     android:id="@+id/d_share"
+                    style="@style/Widget.NontonGo.Button"
                     android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
+                    android:layout_height="44dp"
                     android:layout_marginStart="8dp"
                     android:text="↗" />
             </LinearLayout>

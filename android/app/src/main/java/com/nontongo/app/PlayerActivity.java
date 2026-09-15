@@ -47,6 +47,7 @@ public class PlayerActivity extends AppCompatActivity {
     private TextView titleView;
     private LinearLayout msgWrap;
     private TextView msgView;
+    private LinearLayout playerBar;
 
     private String slug;
     private String title;
@@ -71,8 +72,12 @@ public class PlayerActivity extends AppCompatActivity {
         titleView = findViewById(R.id.player_title);
         msgWrap = findViewById(R.id.player_msg_wrap);
         msgView = findViewById(R.id.player_msg);
+        playerBar = findViewById(R.id.player_bar);
         ImageView close = findViewById(R.id.btn_close);
         ImageView fullscreenBtn = findViewById(R.id.btn_fullscreen);
+        View backMsg = findViewById(R.id.btn_back_msg);
+        if (backMsg != null) backMsg.setOnClickListener(v -> finish());
+        playerView.setOnClickListener(v -> toggleBar());
 
         slug = getIntent().getStringExtra("slug");
         title = getIntent().getStringExtra("title");
@@ -115,6 +120,8 @@ public class PlayerActivity extends AppCompatActivity {
 
     private void showMessage(String text) {
         progress.setVisibility(View.GONE);
+        playerView.setVisibility(View.GONE);
+        playerBar.setVisibility(View.GONE);
         msgWrap.setVisibility(View.VISIBLE);
         msgView.setText(text);
     }
@@ -122,6 +129,7 @@ public class PlayerActivity extends AppCompatActivity {
     private void loadPlay(int server) {
         progress.setVisibility(View.VISIBLE);
         msgWrap.setVisibility(View.GONE);
+        playerView.setVisibility(View.VISIBLE);
         ApiClient.get().play(slug, server > 0 ? server : null).enqueue(new Callback<PlayResponse>() {
             @Override
             public void onResponse(@NonNull Call<PlayResponse> call, @NonNull Response<PlayResponse> response) {
@@ -246,6 +254,27 @@ public class PlayerActivity extends AppCompatActivity {
         }
     };
 
+    private final Runnable hideBar = () -> {
+        if (playerBar != null && msgWrap.getVisibility() != View.VISIBLE) playerBar.setVisibility(View.GONE);
+    };
+
+    private void showBar() {
+        if (playerBar == null || msgWrap.getVisibility() == View.VISIBLE) return;
+        playerBar.setVisibility(View.VISIBLE);
+        handler.removeCallbacks(hideBar);
+        handler.postDelayed(hideBar, 3500);
+    }
+
+    private void toggleBar() {
+        if (playerBar == null) return;
+        if (playerBar.getVisibility() == View.VISIBLE) {
+            handler.removeCallbacks(hideBar);
+            playerBar.setVisibility(View.GONE);
+        } else {
+            showBar();
+        }
+    }
+
     private void toggleFullscreen() {
         fullscreen = !fullscreen;
         if (fullscreen) {
@@ -276,6 +305,7 @@ public class PlayerActivity extends AppCompatActivity {
     protected void onStart() {
         super.onStart();
         handler.postDelayed(ticker, 5000);
+        showBar();
     }
 
     @Override

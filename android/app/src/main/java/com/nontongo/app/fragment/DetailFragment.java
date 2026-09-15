@@ -172,9 +172,16 @@ public class DetailFragment extends Fragment {
                     seasonsWrap.setVisibility(View.VISIBLE);
                     seasons.removeAllViews();
                     for (Integer s : seasonKeys) {
-                        Button b = new Button(requireContext());
+                        com.google.android.material.button.MaterialButton b =
+                                new com.google.android.material.button.MaterialButton(requireContext());
                         b.setText("Season " + s);
                         b.setAllCaps(false);
+                        b.setTextSize(12);
+                        b.setBackgroundTintList(android.content.res.ColorStateList.valueOf(0xFF2F3A52));
+                        b.setStrokeColor(android.content.res.ColorStateList.valueOf(0xFF47546F));
+                        b.setStrokeWidth(2);
+                        b.setCornerRadius(20);
+                        b.setTextColor(0xFFF2F6FD);
                         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
                                 LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
                         lp.setMargins(0, 0, 8, 0);
