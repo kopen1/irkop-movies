@@ -85,8 +85,8 @@ Agar dapat update tanpa uninstall (cara lokal):
 3. Tambahkan **GitHub → Settings → Secrets and variables → Actions**:
    - `ANDROID_KEYSTORE_BASE64` = isi `keystore.b64`
    - `ANDROID_KEYSTORE_PASSWORD` = password keystore
-   - `ANDROID_KEY_ALIAS` = `nontongo`
-   - `ANDROID_KEY_PASSWORD` = password key
+   - `ANDROID_KEY_ALIAS` = `irkop`
+   - `ANDROID_KEY_PASSWORD` = 'irkop'
 4. Jalankan workflow **Android APK** → dapat `app-release.apk` yang ditandatangani.
    APK berikutnya (dari workflow yang sama) bisa dipasang **di atas** versi lama.
 
